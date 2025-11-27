@@ -9,6 +9,7 @@ const messagesContainer = document.getElementById('messages');
 const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
 const modelSelect = document.getElementById('model-select');
+const useToolsCheckbox = document.getElementById('use-tools');
 const conversationsContainer = document.getElementById('conversations');
 
 // Initialize
@@ -22,14 +23,24 @@ document.addEventListener('DOMContentLoaded', () => {
         modelSelect.value = savedModel;
     }
     
+    // Restore tools preference
+    const savedTools = localStorage.getItem('useTools');
+    if (savedTools !== null) {
+        useToolsCheckbox.checked = savedTools === 'true';
+    }
+    
     // Save model selection
     modelSelect.addEventListener('change', () => {
         localStorage.setItem('selectedModel', modelSelect.value);
-        // Update current conversation model if exists
         if (currentConversation) {
             currentConversation.model = modelSelect.value;
             saveConversations();
         }
+    });
+    
+    // Save tools preference
+    useToolsCheckbox.addEventListener('change', () => {
+        localStorage.setItem('useTools', useToolsCheckbox.checked);
     });
 });
 
@@ -70,7 +81,24 @@ async function sendMessage() {
     // Show loading
     isLoading = true;
     sendBtn.disabled = true;
-    const loadingEl = showLoading();
+    
+    // Create assistant message container for streaming
+    const assistantDiv = document.createElement('div');
+    assistantDiv.className = 'message assistant';
+    assistantDiv.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-content">
+            <div class="tool-calls-container" style="display: none;"></div>
+            <div class="response-text"><span class="streaming-cursor">▊</span></div>
+        </div>
+    `;
+    messagesContainer.appendChild(assistantDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    const toolCallsDiv = assistantDiv.querySelector('.tool-calls-container');
+    const responseDiv = assistantDiv.querySelector('.response-text');
+    let fullContent = '';
+    let toolCallsExecuted = [];
 
     try {
         const response = await fetch('/api/chat', {
@@ -78,33 +106,125 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messages: messages,
-                model: modelSelect.value
+                model: modelSelect.value,
+                use_tools: useToolsCheckbox.checked
             })
         });
 
-        const data = await response.json();
-        
-        // Remove loading
-        loadingEl.remove();
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        if (data.error) {
-            showError(data.error);
-        } else {
-            const assistantMessage = { role: 'assistant', content: data.content };
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') {
+                        break;
+                    }
+                    try {
+                        const parsed = JSON.parse(data);
+                        
+                        // Handle tool calls info
+                        if (parsed.type === 'tool_calls' && parsed.tool_calls) {
+                            toolCallsExecuted = parsed.tool_calls;
+                            renderToolCalls(toolCallsDiv, parsed.tool_calls);
+                            toolCallsDiv.style.display = 'block';
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                        
+                        // Handle streaming content
+                        if (parsed.content) {
+                            fullContent += parsed.content;
+                            responseDiv.innerHTML = marked.parse(fullContent) + '<span class="streaming-cursor">▊</span>';
+                            responseDiv.querySelectorAll('pre code').forEach(block => {
+                                if (!block.classList.contains('hljs')) {
+                                    hljs.highlightElement(block);
+                                }
+                            });
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                        if (parsed.error) {
+                            responseDiv.innerHTML = `<span style="color: #ff6b6b;">${escapeHtml(parsed.error)}</span>`;
+                        }
+                    } catch (e) {
+                        // Ignore parse errors for incomplete chunks
+                    }
+                }
+            }
+        }
+
+        // Remove cursor and finalize
+        responseDiv.innerHTML = marked.parse(fullContent);
+        responseDiv.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+        });
+
+        if (fullContent) {
+            const assistantMessage = { 
+                role: 'assistant', 
+                content: fullContent,
+                tool_calls: toolCallsExecuted.length > 0 ? toolCallsExecuted : undefined
+            };
             messages.push(assistantMessage);
-            renderMessage(assistantMessage);
-            
-            // Save conversation
             saveConversation();
         }
+
     } catch (error) {
-        loadingEl.remove();
-        showError('Erreur de connexion au serveur');
+        responseDiv.innerHTML = `<span style="color: #ff6b6b;">Erreur: ${escapeHtml(error.message)}</span>`;
     }
 
     isLoading = false;
     sendBtn.disabled = false;
     messageInput.focus();
+}
+
+// Render tool calls
+function renderToolCalls(container, toolCalls) {
+    container.innerHTML = toolCalls.map((tc, i) => {
+        let resultParsed;
+        try {
+            resultParsed = typeof tc.result === 'string' ? JSON.parse(tc.result) : tc.result;
+        } catch {
+            resultParsed = tc.result;
+        }
+        
+        let argsParsed;
+        try {
+            argsParsed = typeof tc.arguments === 'string' ? JSON.parse(tc.arguments) : tc.arguments;
+        } catch {
+            argsParsed = tc.arguments;
+        }
+        
+        return `
+            <div class="tool-call" onclick="this.classList.toggle('expanded')">
+                <div class="tool-call-header">
+                    <span class="tool-icon">🔧</span>
+                    <span class="tool-name">${escapeHtml(tc.name)}</span>
+                    <span class="tool-status">✓ Exécuté</span>
+                </div>
+                <div class="tool-call-body">
+                    <div class="tool-section">
+                        <div class="tool-section-title">Arguments</div>
+                        <div class="tool-section-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</div>
+                    </div>
+                    <div class="tool-section">
+                        <div class="tool-section-title">Résultat</div>
+                        <div class="tool-section-content">${escapeHtml(JSON.stringify(resultParsed, null, 2))}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Render message
@@ -122,9 +242,47 @@ function renderMessage(message) {
         content = escapeHtml(content).replace(/\n/g, '<br>');
     }
     
+    // Build tool calls HTML if present
+    let toolCallsHtml = '';
+    if (message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0) {
+        const toolCallsContent = message.tool_calls.map(tc => {
+            let resultParsed, argsParsed;
+            try {
+                resultParsed = typeof tc.result === 'string' ? JSON.parse(tc.result) : tc.result;
+            } catch { resultParsed = tc.result; }
+            try {
+                argsParsed = typeof tc.arguments === 'string' ? JSON.parse(tc.arguments) : tc.arguments;
+            } catch { argsParsed = tc.arguments; }
+            
+            return `
+                <div class="tool-call" onclick="this.classList.toggle('expanded')">
+                    <div class="tool-call-header">
+                        <span class="tool-icon">🔧</span>
+                        <span class="tool-name">${escapeHtml(tc.name || 'unknown')}</span>
+                        <span class="tool-status">✓ Exécuté</span>
+                    </div>
+                    <div class="tool-call-body">
+                        <div class="tool-section">
+                            <div class="tool-section-title">Arguments</div>
+                            <div class="tool-section-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</div>
+                        </div>
+                        <div class="tool-section">
+                            <div class="tool-section-title">Résultat</div>
+                            <div class="tool-section-content">${escapeHtml(JSON.stringify(resultParsed, null, 2))}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        toolCallsHtml = `<div class="tool-calls-container">${toolCallsContent}</div>`;
+    }
+    
     div.innerHTML = `
         <div class="message-avatar">${avatar}</div>
-        <div class="message-content">${content}</div>
+        <div class="message-content">
+            ${toolCallsHtml}
+            <div class="response-text">${content}</div>
+        </div>
     `;
     
     messagesContainer.appendChild(div);

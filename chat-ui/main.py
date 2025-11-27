@@ -26,33 +26,62 @@ async def index():
 async def chat(request: Request):
     data = await request.json()
     messages = data.get("messages", [])
-    model = data.get("model", "gpt-4")
+    model = data.get("model", "gpt-4.1")
+    use_tools = data.get("use_tools", True)
     
     async def generate():
         async with httpx.AsyncClient(timeout=120.0) as client:
             try:
-                response = await client.post(
+                async with client.stream(
+                    "POST",
                     f"{COPILOT_PROXY_URL}/chat/completions",
                     json={
                         "model": model,
                         "messages": messages,
-                        "stream": False
+                        "stream": True,
+                        "use_tools": use_tools
                     },
                     headers={"Content-Type": "application/json"}
-                )
-                
-                if response.status_code != 200:
-                    yield json.dumps({"error": f"API Error: {response.status_code}"})
-                    return
-                
-                result = response.json()
-                content = result["choices"][0]["message"]["content"]
-                yield json.dumps({"content": content})
+                ) as response:
+                    if response.status_code != 200:
+                        yield f"data: {json.dumps({'error': f'API Error: {response.status_code}'})}\n\n"
+                        return
+                    
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str.strip() == "[DONE]":
+                                yield "data: [DONE]\n\n"
+                                break
+                            try:
+                                chunk = json.loads(data_str)
+                                
+                                # Forward tool calls info
+                                if chunk.get("type") == "tool_calls":
+                                    yield f"data: {json.dumps(chunk)}\n\n"
+                                    continue
+                                
+                                if "choices" in chunk and len(chunk["choices"]) > 0:
+                                    delta = chunk["choices"][0].get("delta", {})
+                                    if "content" in delta:
+                                        yield f"data: {json.dumps({'content': delta['content']})}\n\n"
+                            except json.JSONDecodeError:
+                                pass
+                        elif line.strip():
+                            yield f"{line}\n"
                 
             except Exception as e:
-                yield json.dumps({"error": str(e)})
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
     
-    return StreamingResponse(generate(), media_type="application/json")
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 @app.get("/api/models")

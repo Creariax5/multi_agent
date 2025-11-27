@@ -1,18 +1,28 @@
 services:
+  mcp-server:
+    build: ./mcp-server
+    container_name: mcp-server
+    restart: always
+    ports:
+      - "8081:8081"
+
   copilot-proxy:
     build: ./copilot-proxy
     container_name: copilot-proxy
     restart: always
     ports:
       - "8080:8080"
+    depends_on:
+      - mcp-server
     environment:
       - COPILOT_TOKEN=${COPILOT_TOKEN}
+      - MCP_SERVER_URL=http://mcp-server:8081
       - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
       - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
       - http_proxy=http://proxy-web.cnamts.fr:3128/
       - https_proxy=http://proxy-web.cnamts.fr:3128/
-      - NO_PROXY=localhost,127.0.0.1
-      - no_proxy=localhost,127.0.0.1
+      - NO_PROXY=localhost,127.0.0.1,mcp-server
+      - no_proxy=localhost,127.0.0.1,mcp-server
 
   chat-ui:
     build: ./chat-ui
