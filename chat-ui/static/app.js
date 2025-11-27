@@ -100,6 +100,8 @@ async function sendMessage() {
     let fullContent = '';
     let toolCallsExecuted = [];
     let currentContent = '';  // Track content for interleaved display
+    let messageEvents = [];   // Track sequence of events for saving
+    let currentTextBuffer = ''; // Buffer for text chunks to create text events
 
     try {
         const response = await fetch('/api/chat', {
@@ -139,29 +141,60 @@ async function sendMessage() {
                     try {
                         const parsed = JSON.parse(data);
                         
-                        // === THINKING EVENT ===
-                        if (parsed.type === 'thinking' && parsed.content) {
-                            // Flush current text content before thinking
-                            if (currentContent) {
+                        // === THINKING EVENT (Final or Delta) ===
+                        if ((parsed.type === 'thinking' || parsed.type === 'thinking_delta') && parsed.content) {
+                            const isDelta = parsed.type === 'thinking_delta';
+                            
+                            // Flush current text content before thinking (only if starting new block)
+                            if (currentContent && !eventsContainer.lastElementChild?.classList.contains('thinking-block')) {
                                 const textDiv = document.createElement('div');
                                 textDiv.className = 'response-text-block';
                                 textDiv.innerHTML = marked.parse(currentContent);
                                 eventsContainer.appendChild(textDiv);
+                                
+                                // Save text event
+                                messageEvents.push({ type: 'text', content: currentContent });
                                 currentContent = '';
                             }
                             
-                            // Create thinking block
-                            const thinkDiv = document.createElement('div');
-                            thinkDiv.className = 'thinking-block';
-                            thinkDiv.innerHTML = `
-                                <div class="thinking-header" onclick="this.parentElement.classList.toggle('expanded')">
-                                    <span class="thinking-icon">💭</span>
-                                    <span class="thinking-label">Réflexion</span>
-                                    <span class="thinking-toggle">▼</span>
-                                </div>
-                                <div class="thinking-content">${marked.parse(parsed.content)}</div>
-                            `;
-                            eventsContainer.appendChild(thinkDiv);
+                            let thinkDiv = eventsContainer.lastElementChild;
+                            
+                            // Reuse if it's a thinking block
+                            if (thinkDiv && thinkDiv.classList.contains('thinking-block')) {
+                                const contentDiv = thinkDiv.querySelector('.thinking-content');
+                                if (isDelta) {
+                                    // Append raw text
+                                    contentDiv.textContent += parsed.content;
+                                } else {
+                                    // Final event: Replace content with proper Markdown
+                                    contentDiv.innerHTML = marked.parse(parsed.content);
+                                    
+                                    // Save thinking event (only final)
+                                    messageEvents.push({ type: 'thinking', content: parsed.content });
+                                }
+                            } else {
+                                // Create new thinking block
+                                thinkDiv = document.createElement('div');
+                                thinkDiv.className = 'thinking-block';
+                                thinkDiv.innerHTML = `
+                                    <div class="thinking-header" onclick="this.parentElement.classList.toggle('expanded')">
+                                        <span class="thinking-icon">💭</span>
+                                        <span class="thinking-label">Réflexion</span>
+                                        <span class="thinking-toggle">▼</span>
+                                    </div>
+                                    <div class="thinking-content"></div>
+                                `;
+                                eventsContainer.appendChild(thinkDiv);
+                                
+                                const contentDiv = thinkDiv.querySelector('.thinking-content');
+                                if (isDelta) {
+                                    contentDiv.textContent = parsed.content;
+                                } else {
+                                    contentDiv.innerHTML = marked.parse(parsed.content);
+                                    // Save thinking event
+                                    messageEvents.push({ type: 'thinking', content: parsed.content });
+                                }
+                            }
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         }
                         
@@ -176,6 +209,9 @@ async function sendMessage() {
                                 textDiv.className = 'response-text-block';
                                 textDiv.innerHTML = marked.parse(currentContent);
                                 eventsContainer.appendChild(textDiv);
+                                
+                                // Save text event
+                                messageEvents.push({ type: 'text', content: currentContent });
                                 currentContent = '';
                             }
                             
@@ -207,8 +243,42 @@ async function sendMessage() {
                             `;
                             eventsContainer.appendChild(toolDiv);
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                            // Save tool event
+                            messageEvents.push({ type: 'tool_call', tool_call: tc });
                         }
                         
+                        // === HISTORY UPDATE EVENT ===
+                        if (parsed.type === 'history_update' && parsed.messages) {
+                            // The backend has summarized the conversation.
+                            // We need to update our local state to match, otherwise we'll keep sending the old full history.
+                            
+                            // Filter out system messages for display/storage (usually we only keep user/assistant)
+                            // But here the summary is likely a user message or similar.
+                            const newMessages = parsed.messages.filter(m => m.role !== 'system');
+                            
+                            // Update local state
+                            messages = newMessages;
+                            
+                            // Clear UI and re-render
+                            messagesContainer.innerHTML = '';
+                            
+                            // Add a visual indicator
+                            const separator = document.createElement('div');
+                            separator.className = 'message system';
+                            separator.innerHTML = '<div class="message-content" style="text-align: center; color: #888;">--- Conversation Résumée ---</div>';
+                            messagesContainer.appendChild(separator);
+                            
+                            // Render new messages
+                            messages.forEach(msg => renderMessage(msg));
+                            
+                            // Re-append the current assistant response container (since we just wiped the UI)
+                            messagesContainer.appendChild(assistantDiv);
+                            
+                            // Save immediately
+                            saveConversation();
+                        }
+
                         // === TEXT CONTENT EVENT ===
                         // Only process content from regular chat chunks (not thinking or tool_call events)
                         if (parsed.choices && parsed.choices[0]?.delta?.content) {
@@ -236,6 +306,9 @@ async function sendMessage() {
             textDiv.className = 'response-text-block';
             textDiv.innerHTML = marked.parse(currentContent);
             eventsContainer.appendChild(textDiv);
+            
+            // Save final text event
+            messageEvents.push({ type: 'text', content: currentContent });
         }
         
         // Remove streaming cursor
@@ -245,11 +318,12 @@ async function sendMessage() {
             responseDiv.innerHTML = '<span style="color: #ff6b6b;">Aucune réponse reçue</span>';
         }
 
-        if (fullContent) {
+        if (fullContent || messageEvents.length > 0) {
             const assistantMessage = { 
                 role: 'assistant', 
                 content: fullContent,
-                tool_calls: toolCallsExecuted.length > 0 ? toolCallsExecuted : undefined
+                tool_calls: toolCallsExecuted.length > 0 ? toolCallsExecuted : undefined,
+                events: messageEvents.length > 0 ? messageEvents : undefined
             };
             messages.push(assistantMessage);
             saveConversation();
@@ -310,31 +384,43 @@ function renderMessage(message) {
     
     const avatar = message.role === 'user' ? '👤' : '🤖';
     
-    // Parse markdown for assistant messages
-    let content = message.content;
-    if (message.role === 'assistant') {
-        content = marked.parse(content);
-    } else {
-        content = escapeHtml(content).replace(/\n/g, '<br>');
-    }
-    
-    // Build tool calls HTML if present
-    let toolCallsHtml = '';
-    if (message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0) {
-        const toolCallsContent = message.tool_calls.map(tc => {
-            let resultParsed, argsParsed;
-            try {
-                resultParsed = typeof tc.result === 'string' ? JSON.parse(tc.result) : tc.result;
-            } catch { resultParsed = tc.result; }
-            try {
-                argsParsed = typeof tc.arguments === 'string' ? JSON.parse(tc.arguments) : tc.arguments;
-            } catch { argsParsed = tc.arguments; }
-            
-            return `
-                <div class="tool-call" onclick="this.classList.toggle('expanded')">
+    // If we have structured events (new format), render them in order
+    if (message.role === 'assistant' && message.events && message.events.length > 0) {
+        div.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-content">
+                <div class="events-container"></div>
+            </div>
+        `;
+        
+        const eventsContainer = div.querySelector('.events-container');
+        
+        message.events.forEach(event => {
+            if (event.type === 'thinking') {
+                const thinkDiv = document.createElement('div');
+                thinkDiv.className = 'thinking-block';
+                thinkDiv.innerHTML = `
+                    <div class="thinking-header" onclick="this.parentElement.classList.toggle('expanded')">
+                        <span class="thinking-icon">💭</span>
+                        <span class="thinking-label">Réflexion</span>
+                        <span class="thinking-toggle">▼</span>
+                    </div>
+                    <div class="thinking-content">${marked.parse(event.content)}</div>
+                `;
+                eventsContainer.appendChild(thinkDiv);
+            } else if (event.type === 'tool_call') {
+                const tc = event.tool_call;
+                let resultParsed, argsParsed;
+                try { resultParsed = typeof tc.result === 'string' ? JSON.parse(tc.result) : tc.result; } catch { resultParsed = tc.result; }
+                try { argsParsed = typeof tc.arguments === 'string' ? JSON.parse(tc.arguments) : tc.arguments; } catch { argsParsed = tc.arguments; }
+                
+                const toolDiv = document.createElement('div');
+                toolDiv.className = 'tool-call';
+                toolDiv.onclick = function() { this.classList.toggle('expanded'); };
+                toolDiv.innerHTML = `
                     <div class="tool-call-header">
                         <span class="tool-icon">🔧</span>
-                        <span class="tool-name">${escapeHtml(tc.name || 'unknown')}</span>
+                        <span class="tool-name">${escapeHtml(tc.name)}</span>
                         <span class="tool-status">✓ Exécuté</span>
                     </div>
                     <div class="tool-call-body">
@@ -347,19 +433,68 @@ function renderMessage(message) {
                             <div class="tool-section-content">${escapeHtml(JSON.stringify(resultParsed, null, 2))}</div>
                         </div>
                     </div>
-                </div>
-            `;
-        }).join('');
-        toolCallsHtml = `<div class="tool-calls-container">${toolCallsContent}</div>`;
+                `;
+                eventsContainer.appendChild(toolDiv);
+            } else if (event.type === 'text') {
+                const textDiv = document.createElement('div');
+                textDiv.className = 'response-text-block';
+                textDiv.innerHTML = marked.parse(event.content);
+                eventsContainer.appendChild(textDiv);
+            }
+        });
+        
+    } else {
+        // Legacy rendering (or user messages)
+        let content = message.content;
+        if (message.role === 'assistant') {
+            content = marked.parse(content);
+        } else {
+            content = escapeHtml(content).replace(/\n/g, '<br>');
+        }
+        
+        // Build tool calls HTML if present
+        let toolCallsHtml = '';
+        if (message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0) {
+            const toolCallsContent = message.tool_calls.map(tc => {
+                let resultParsed, argsParsed;
+                try {
+                    resultParsed = typeof tc.result === 'string' ? JSON.parse(tc.result) : tc.result;
+                } catch { resultParsed = tc.result; }
+                try {
+                    argsParsed = typeof tc.arguments === 'string' ? JSON.parse(tc.arguments) : tc.arguments;
+                } catch { argsParsed = tc.arguments; }
+                
+                return `
+                    <div class="tool-call" onclick="this.classList.toggle('expanded')">
+                        <div class="tool-call-header">
+                            <span class="tool-icon">🔧</span>
+                            <span class="tool-name">${escapeHtml(tc.name || 'unknown')}</span>
+                            <span class="tool-status">✓ Exécuté</span>
+                        </div>
+                        <div class="tool-call-body">
+                            <div class="tool-section">
+                                <div class="tool-section-title">Arguments</div>
+                                <div class="tool-section-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</div>
+                            </div>
+                            <div class="tool-section">
+                                <div class="tool-section-title">Résultat</div>
+                                <div class="tool-section-content">${escapeHtml(JSON.stringify(resultParsed, null, 2))}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            toolCallsHtml = `<div class="tool-calls-container">${toolCallsContent}</div>`;
+        }
+        
+        div.innerHTML = `
+            <div class="message-avatar">${avatar}</div>
+            <div class="message-content">
+                ${toolCallsHtml}
+                <div class="response-text">${content}</div>
+            </div>
+        `;
     }
-    
-    div.innerHTML = `
-        <div class="message-avatar">${avatar}</div>
-        <div class="message-content">
-            ${toolCallsHtml}
-            <div class="response-text">${content}</div>
-        </div>
-    `;
     
     messagesContainer.appendChild(div);
     
