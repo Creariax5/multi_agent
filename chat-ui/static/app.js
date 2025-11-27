@@ -88,17 +88,18 @@ async function sendMessage() {
     assistantDiv.innerHTML = `
         <div class="message-avatar">🤖</div>
         <div class="message-content">
-            <div class="tool-calls-container" style="display: none;"></div>
+            <div class="events-container"></div>
             <div class="response-text"><span class="streaming-cursor">▊</span></div>
         </div>
     `;
     messagesContainer.appendChild(assistantDiv);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
-    const toolCallsDiv = assistantDiv.querySelector('.tool-calls-container');
+    const eventsContainer = assistantDiv.querySelector('.events-container');
     const responseDiv = assistantDiv.querySelector('.response-text');
     let fullContent = '';
     let toolCallsExecuted = [];
+    let currentContent = '';  // Track content for interleaved display
 
     try {
         const response = await fetch('/api/chat', {
@@ -117,57 +118,132 @@ async function sendMessage() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';  // Buffer for incomplete SSE lines
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            
+            // Keep the last potentially incomplete line in buffer
+            buffer = lines.pop() || '';
 
             for (const line of lines) {
                 if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
-                    if (data === '[DONE]') {
-                        break;
-                    }
+                    const data = line.slice(6).trim();
+                    if (data === '[DONE]') break;
+                    if (!data) continue;
+                    
                     try {
                         const parsed = JSON.parse(data);
                         
-                        // Handle tool calls info
-                        if (parsed.type === 'tool_calls' && parsed.tool_calls) {
-                            toolCallsExecuted = parsed.tool_calls;
-                            renderToolCalls(toolCallsDiv, parsed.tool_calls);
-                            toolCallsDiv.style.display = 'block';
+                        // === THINKING EVENT ===
+                        if (parsed.type === 'thinking' && parsed.content) {
+                            // Flush current text content before thinking
+                            if (currentContent) {
+                                const textDiv = document.createElement('div');
+                                textDiv.className = 'response-text-block';
+                                textDiv.innerHTML = marked.parse(currentContent);
+                                eventsContainer.appendChild(textDiv);
+                                currentContent = '';
+                            }
+                            
+                            // Create thinking block
+                            const thinkDiv = document.createElement('div');
+                            thinkDiv.className = 'thinking-block';
+                            thinkDiv.innerHTML = `
+                                <div class="thinking-header" onclick="this.parentElement.classList.toggle('expanded')">
+                                    <span class="thinking-icon">💭</span>
+                                    <span class="thinking-label">Réflexion</span>
+                                    <span class="thinking-toggle">▼</span>
+                                </div>
+                                <div class="thinking-content">${marked.parse(parsed.content)}</div>
+                            `;
+                            eventsContainer.appendChild(thinkDiv);
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         }
                         
-                        // Handle streaming content
-                        if (parsed.content) {
-                            fullContent += parsed.content;
-                            responseDiv.innerHTML = marked.parse(fullContent) + '<span class="streaming-cursor">▊</span>';
-                            responseDiv.querySelectorAll('pre code').forEach(block => {
-                                if (!block.classList.contains('hljs')) {
-                                    hljs.highlightElement(block);
-                                }
-                            });
+                        // === TOOL CALL EVENT ===
+                        if (parsed.type === 'tool_call' && parsed.tool_call) {
+                            const tc = parsed.tool_call;
+                            toolCallsExecuted.push(tc);
+                            
+                            // Flush current text content before tool
+                            if (currentContent) {
+                                const textDiv = document.createElement('div');
+                                textDiv.className = 'response-text-block';
+                                textDiv.innerHTML = marked.parse(currentContent);
+                                eventsContainer.appendChild(textDiv);
+                                currentContent = '';
+                            }
+                            
+                            // Create compact tool call element
+                            const toolDiv = document.createElement('div');
+                            toolDiv.className = 'tool-call';
+                            toolDiv.onclick = function() { this.classList.toggle('expanded'); };
+                            
+                            let resultParsed, argsParsed;
+                            try { resultParsed = JSON.parse(tc.result); } catch { resultParsed = tc.result; }
+                            try { argsParsed = JSON.parse(tc.arguments); } catch { argsParsed = tc.arguments; }
+                            
+                            toolDiv.innerHTML = `
+                                <div class="tool-call-header">
+                                    <span class="tool-icon">🔧</span>
+                                    <span class="tool-name">${escapeHtml(tc.name)}</span>
+                                    <span class="tool-status">✓</span>
+                                </div>
+                                <div class="tool-call-body">
+                                    <div class="tool-section">
+                                        <div class="tool-section-title">Arguments</div>
+                                        <div class="tool-section-content">${escapeHtml(JSON.stringify(argsParsed, null, 2))}</div>
+                                    </div>
+                                    <div class="tool-section">
+                                        <div class="tool-section-title">Résultat</div>
+                                        <div class="tool-section-content">${escapeHtml(JSON.stringify(resultParsed, null, 2))}</div>
+                                    </div>
+                                </div>
+                            `;
+                            eventsContainer.appendChild(toolDiv);
                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         }
+                        
+                        // === TEXT CONTENT EVENT ===
+                        // Only process content from regular chat chunks (not thinking or tool_call events)
+                        if (parsed.choices && parsed.choices[0]?.delta?.content) {
+                            const textContent = parsed.choices[0].delta.content;
+                            fullContent += textContent;
+                            currentContent += textContent;
+                            responseDiv.innerHTML = marked.parse(currentContent) + '<span class="streaming-cursor">▊</span>';
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }
+                        
+                        // === ERROR EVENT ===
                         if (parsed.error) {
                             responseDiv.innerHTML = `<span style="color: #ff6b6b;">${escapeHtml(parsed.error)}</span>`;
                         }
                     } catch (e) {
-                        // Ignore parse errors for incomplete chunks
+                        // Ignore parse errors
                     }
                 }
             }
         }
 
-        // Remove cursor and finalize
-        responseDiv.innerHTML = marked.parse(fullContent);
-        responseDiv.querySelectorAll('pre code').forEach(block => {
-            hljs.highlightElement(block);
-        });
+        // Finalize: add remaining content
+        if (currentContent) {
+            const textDiv = document.createElement('div');
+            textDiv.className = 'response-text-block';
+            textDiv.innerHTML = marked.parse(currentContent);
+            eventsContainer.appendChild(textDiv);
+        }
+        
+        // Remove streaming cursor
+        if (eventsContainer.childElementCount > 0) {
+            responseDiv.remove();
+        } else if (!fullContent) {
+            responseDiv.innerHTML = '<span style="color: #ff6b6b;">Aucune réponse reçue</span>';
+        }
 
         if (fullContent) {
             const assistantMessage = { 

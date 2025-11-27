@@ -18,12 +18,16 @@ MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://mcp-server:8081")
 # Model used for tool calls (FREE = no credits)
 TOOL_CALL_MODEL = "gpt-4.1"
 
+# Max iterations for agentic loop
+MAX_AGENTIC_ITERATIONS = 15
+
 # Cache for the Copilot access token
 cached_token = None
 token_expires_at = 0
 
-# Cache for MCP tools
+# Cache for MCP tools and metadata
 cached_tools = None
+cached_metas = None
 
 
 def clean_messages(messages: list) -> list:
@@ -104,6 +108,41 @@ async def get_mcp_tools():
         print(f"Failed to fetch MCP tools: {e}")
     
     return []
+
+
+async def get_tool_handlers():
+    """Fetch tool handler info from MCP server"""
+    global cached_metas
+    
+    if cached_metas is not None:
+        return cached_metas
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{MCP_SERVER_URL}/tools/handlers")
+            if response.status_code == 200:
+                data = response.json()
+                cached_metas = data.get("handlers", {})
+                return cached_metas
+    except Exception as e:
+        print(f"Failed to fetch handlers: {e}")
+    
+    return {}
+
+
+async def tool_to_event(name: str, args: dict, result: dict) -> dict:
+    """Ask MCP server to convert tool call to UI event"""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(
+                f"{MCP_SERVER_URL}/tools/to_event",
+                json={"name": name, "arguments": args, "result": result}
+            )
+            if response.status_code == 200:
+                return response.json().get("event")
+    except:
+        pass
+    return None
 
 
 async def execute_tool_calls(tool_calls: list) -> list:
@@ -192,9 +231,9 @@ async def list_tools():
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
-    """Chat completions with automatic tool handling using GPT-4.1 (free)"""
+    """Chat completions with AGENTIC tool handling - loop until done"""
     print("=" * 60)
-    print("Received chat completion request")
+    print("Received chat completion request (AGENTIC MODE)")
     
     try:
         body = await request.json()
@@ -212,248 +251,204 @@ async def chat_completions(request: Request):
     
     print(f"Model: {original_model}, Use Tools: {use_tools}, Stream: {stream}")
     
-    # If tools are requested, add MCP tools
-    if use_tools and "tools" not in body:
+    # Get MCP tools and handlers
+    mcp_tools = []
+    tool_handlers = {}
+    if use_tools:
         mcp_tools = await get_mcp_tools()
+        tool_handlers = await get_tool_handlers()
         if mcp_tools:
-            body["tools"] = mcp_tools
-            body["tool_choice"] = "auto"
-            print(f"Added {len(mcp_tools)} MCP tools to request")
+            print(f"Loaded {len(mcp_tools)} MCP tools")
             
-            # Add system message to inform the model about available tools
+            # System message forcing tool-only behavior
             tool_names = [t["function"]["name"] for t in mcp_tools]
             system_msg = {
                 "role": "system",
-                "content": f"You have access to the following tools: {', '.join(tool_names)}. Use them when appropriate to help the user. For example, use 'get_weather' for weather questions, 'calculate' for math, 'get_current_time' for time, 'convert_units' for unit conversions, 'search_web' for web searches, 'generate_random' for random numbers."
+                "content": f"""You MUST use tools for EVERYTHING. Available tools: {', '.join(tool_names)}.
+
+CRITICAL RULES:
+1. Use send_message() to communicate with the user - NEVER respond with plain text
+2. Use think() for complex reasoning - the thought content is shown separately to the user
+3. NEVER repeat the content of think() in send_message() - keep them independent
+4. Use other tools (calculate, get_weather, etc.) for actions  
+5. Work step by step - one tool call at a time
+6. When you have completed ALL tasks, call task_complete() to finish
+
+Example for "Explain why 2+2=4":
+1. think("Let me reason about this mathematically...")
+2. send_message("2+2=4 because addition combines quantities.")
+3. task_complete()
+
+IMPORTANT: think() shows your reasoning process, send_message() shows the final answer - DO NOT duplicate content between them!"""
             }
-            # Insert system message at the beginning
             messages = body.get("messages", [])
             if not any(m.get("role") == "system" for m in messages):
                 body["messages"] = [system_msg] + messages
     
-    # For tool-enabled requests, use GPT-4.1 (free) for orchestration
-    if use_tools and body.get("tools"):
-        # Step 1: Check for tool calls with GPT-4.1 (FREE)
-        tool_check_body = body.copy()
-        tool_check_body["model"] = TOOL_CALL_MODEL
-        tool_check_body["stream"] = False
+    # AGENTIC LOOP - All actions are tool calls
+    # Collect events in chronological order for proper display
+    events = []  # List of {"type": "message"|"tool_call", "content": ...}
+    current_messages = body.get("messages", []).copy()
+    iteration = 0
+    
+    while iteration < MAX_AGENTIC_ITERATIONS:
+        iteration += 1
+        print(f"\n--- Agentic iteration {iteration} ---")
         
-        print(f"Step 1: Checking for tool calls with {TOOL_CALL_MODEL} (FREE)")
-        result = await make_copilot_request(tool_check_body, copilot_token)
+        # Build request with tools - force tool use
+        loop_body = {
+            "model": TOOL_CALL_MODEL,
+            "messages": current_messages,
+            "stream": False
+        }
+        
+        if mcp_tools and use_tools:
+            loop_body["tools"] = mcp_tools
+            loop_body["tool_choice"] = "required"  # Force tool use
+        
+        # Make request
+        result = await make_copilot_request(loop_body, copilot_token)
         
         if not result:
-            # Fallback: try without tools
-            print("Tool check failed, falling back to direct request")
-            clean_body = body.copy()
-            for key in ["tools", "tool_choice", "use_tools"]:
-                clean_body.pop(key, None)
-            
-            if stream:
-                async def stream_fallback():
-                    headers = {
-                        "Authorization": f"Bearer {copilot_token}",
-                        "Content-Type": "application/json",
-                        "Accept": "text/event-stream",
-                        "Editor-Version": "vscode/1.103.2",
-                        "Copilot-Integration-Id": "vscode-chat",
-                        "X-Initiator": "user",
-                        "x-github-api-version": "2025-05-01",
-                        "User-Agent": "GitHubCopilotChat/0.12.0",
-                    }
-                    async with httpx.AsyncClient(timeout=120.0) as client:
-                        async with client.stream(
-                            "POST",
-                            f"{COPILOT_API_URL}/chat/completions",
-                            headers=headers,
-                            json=clean_body
-                        ) as response:
-                            async for line in response.aiter_lines():
-                                if line:
-                                    yield f"{line}\n"
-                
-                return StreamingResponse(
-                    stream_fallback(),
-                    media_type="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
-                )
-            return JSONResponse(status_code=500, content={"error": "Failed to get response"})
+            print("Request failed, breaking loop")
+            break
         
-        # Check if the model wants to use tools
         choice = result.get("choices", [{}])[0]
         message = choice.get("message", {})
+        finish_reason = choice.get("finish_reason", "")
         tool_calls = message.get("tool_calls", [])
         
-        if tool_calls:
-            print(f"Step 2: Model requested {len(tool_calls)} tool calls")
+        print(f"Finish reason: {finish_reason}, Tool calls: {len(tool_calls)}")
+        
+        # If no tool calls, we're done (shouldn't happen with tool_choice=required)
+        if not tool_calls:
+            print("No tool calls, exiting loop")
+            break
+        
+        # Execute tool calls
+        print(f"Executing {len(tool_calls)} tool calls...")
+        tool_results = await execute_tool_calls(tool_calls)
+        
+        # Process each tool call - delegate to MCP server
+        task_done = False
+        for tc in tool_calls:
+            tc_name = tc.get("function", {}).get("name")
+            tc_args_str = tc.get("function", {}).get("arguments", "{}")
+            tc_result_str = next(
+                (tr["content"] for tr in tool_results if tr["tool_call_id"] == tc["id"]),
+                "{}"
+            )
             
-            # Execute the tool calls
-            tool_results = await execute_tool_calls(tool_calls)
-            print(f"Step 3: Executed tools, got {len(tool_results)} results")
+            # Parse args and result
+            try:
+                tc_args = json.loads(tc_args_str) if tc_args_str else {}
+            except:
+                tc_args = {}
+            try:
+                tc_result = json.loads(tc_result_str) if tc_result_str else {}
+            except:
+                tc_result = {}
             
-            # Build messages with tool results
-            messages = body.get("messages", []).copy()
-            messages.append(message)
-            messages.extend(tool_results)
+            # Get handler info
+            handler = tool_handlers.get(tc_name, {})
             
-            # Step 4: Final response with original model (or GPT-4.1 to save credits)
-            final_body = {
-                "model": original_model,
-                "messages": messages,
-                "stream": stream
-            }
+            # Check if terminal tool
+            if handler.get("is_terminal"):
+                print(f"  {tc_name}: Terminal - ending loop")
+                task_done = True
+                continue
             
-            print(f"Step 4: Generating final response with {original_model}")
+            # Ask MCP server to convert to UI event
+            if handler.get("has_to_event"):
+                event = await tool_to_event(tc_name, tc_args, tc_result)
+                if event:
+                    events.append(event)
+                    content = event.get("content", "")[:50]
+                    print(f"  {tc_name}: {event.get('type')} - {content}...")
+                    continue
             
-            if stream:
-                async def stream_with_tools():
-                    # Send tool info first
-                    tool_info = {
-                        "type": "tool_calls",
-                        "tool_calls": [
-                            {
-                                "name": tc.get("function", {}).get("name"),
-                                "arguments": tc.get("function", {}).get("arguments"),
-                                "result": next(
-                                    (tr["content"] for tr in tool_results if tr["tool_call_id"] == tc["id"]),
-                                    None
-                                )
-                            }
-                            for tc in tool_calls
-                        ]
-                    }
-                    yield f"data: {json.dumps(tool_info)}\n\n"
-                    
-                    # Stream the response
-                    headers = {
-                        "Authorization": f"Bearer {copilot_token}",
-                        "Content-Type": "application/json",
-                        "Accept": "text/event-stream",
-                        "Editor-Version": "vscode/1.103.2",
-                        "Copilot-Integration-Id": "vscode-chat",
-                        "X-Initiator": "agent",
-                        "x-github-api-version": "2025-05-01",
-                        "User-Agent": "GitHubCopilotChat/0.12.0",
-                    }
-                    
-                    async with httpx.AsyncClient(timeout=120.0) as client:
-                        async with client.stream(
-                            "POST",
-                            f"{COPILOT_API_URL}/chat/completions",
-                            headers=headers,
-                            json=final_body
-                        ) as response:
-                            async for line in response.aiter_lines():
-                                if line:
-                                    yield f"{line}\n"
-                
-                return StreamingResponse(
-                    stream_with_tools(),
-                    media_type="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
-                )
-            else:
-                final_result = await make_copilot_request(final_body, copilot_token)
-                if final_result:
-                    final_result["tool_calls_executed"] = [
-                        {
-                            "name": tc.get("function", {}).get("name"),
-                            "arguments": tc.get("function", {}).get("arguments"),
-                            "result": next(
-                                (tr["content"] for tr in tool_results if tr["tool_call_id"] == tc["id"]),
-                                None
-                            )
-                        }
-                        for tc in tool_calls
-                    ]
-                    return JSONResponse(content=final_result)
-        else:
-            # No tool calls needed - stream the response from GPT-4.1 result
-            print("No tool calls needed, streaming response")
-            content = message.get("content", "")
-            
-            if stream:
-                async def stream_no_tools():
-                    # Convert the non-streaming result to SSE format
-                    # Send content in chunks to simulate streaming
-                    chunk_size = 20
-                    for i in range(0, len(content), chunk_size):
-                        chunk = content[i:i+chunk_size]
-                        data = {
-                            "choices": [{
-                                "delta": {"content": chunk},
-                                "index": 0
-                            }]
-                        }
-                        yield f"data: {json.dumps(data)}\n\n"
-                    yield "data: [DONE]\n\n"
-                
-                return StreamingResponse(
-                    stream_no_tools(),
-                    media_type="text/event-stream",
-                    headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
-                )
-            else:
-                return JSONResponse(content=result)
+            # Default: show as regular tool call
+            events.append({
+                "type": "tool_call",
+                "tool_call": {"name": tc_name, "arguments": tc_args_str, "result": tc_result_str}
+            })
+            print(f"  {tc_name}: done")
+        
+        # Exit loop if task_complete was called
+        if task_done:
+            print("Task marked as complete, exiting agentic loop")
+            break
+        
+        # Add assistant message and tool results to conversation
+        current_messages.append(message)
+        current_messages.extend(tool_results)
     
-    # Direct request (no tools or model already checked)
-    is_tool_continuation = any(msg.get("role") == "tool" for msg in body.get("messages", []))
-    initiator = "agent" if is_tool_continuation else "user"
-    
-    headers = {
-        "Authorization": f"Bearer {copilot_token}",
-        "Content-Type": "application/json",
-        "Accept": "text/event-stream" if stream else "application/json",
-        "Editor-Version": "vscode/1.103.2",
-        "Copilot-Integration-Id": "vscode-chat",
-        "X-Initiator": initiator,
-        "x-github-api-version": "2025-05-01",
-        "User-Agent": "GitHubCopilotChat/0.12.0",
-    }
-    
-    # Remove tools for direct request
-    clean_body = body.copy()
-    if "tools" in clean_body:
-        del clean_body["tools"]
-    if "tool_choice" in clean_body:
-        del clean_body["tool_choice"]
-    if "use_tools" in clean_body:
-        del clean_body["use_tools"]
+    # Count events for logging
+    tool_count = sum(1 for e in events if e["type"] == "tool_call")
+    msg_count = sum(1 for e in events if e["type"] == "message")
+    print(f"\nAgentic loop complete. Iterations: {iteration}, Tool calls: {tool_count}, Messages: {msg_count}")
     
     if stream:
-        async def stream_response():
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                async with client.stream(
-                    "POST",
-                    f"{COPILOT_API_URL}/chat/completions",
-                    headers=headers,
-                    json=clean_body
-                ) as response:
-                    if response.status_code != 200:
-                        error_text = await response.aread()
-                        yield f"data: {json.dumps({'error': str(error_text)})}\n\n"
-                        return
-                    async for line in response.aiter_lines():
-                        if line:
-                            yield f"{line}\n"
+        async def stream_agentic():
+            # Send events in chronological order
+            for event in events:
+                if event["type"] == "tool_call":
+                    yield f"data: {json.dumps({'type': 'tool_call', 'tool_call': event['tool_call']})}\n\n"
+                elif event["type"] == "thinking":
+                    yield f"data: {json.dumps({'type': 'thinking', 'content': event['content']})}\n\n"
+                elif event["type"] == "message":
+                    chunk = {
+                        "id": "agentic",
+                        "object": "chat.completion.chunk",
+                        "choices": [{
+                            "index": 0,
+                            "delta": {"content": event["content"]},
+                            "finish_reason": None
+                        }]
+                    }
+                    yield f"data: {json.dumps(chunk)}\n\n"
+            
+            # Send done signal
+            done_chunk = {
+                "id": "agentic",
+                "object": "chat.completion.chunk", 
+                "choices": [{
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "stop"
+                }]
+            }
+            yield f"data: {json.dumps(done_chunk)}\n\n"
+            yield "data: [DONE]\n\n"
         
         return StreamingResponse(
-            stream_response(),
+            stream_agentic(),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
         )
-    
-    # Non-streaming
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(
-            f"{COPILOT_API_URL}/chat/completions",
-            headers=headers,
-            json=clean_body
-        )
+    else:
+        # Non-streaming: return result with events in order
+        all_messages = [e["content"] for e in events if e["type"] == "message"]
+        all_tool_calls = [e["tool_call"] for e in events if e["type"] == "tool_call"]
+        final_content = "\n\n".join(all_messages)
         
-        if response.status_code != 200:
-            return JSONResponse(status_code=response.status_code, content={"error": response.text})
-        
-        return JSONResponse(content=response.json())
+        result = {
+            "id": "agentic",
+            "object": "chat.completion",
+            "model": original_model,
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": final_content
+                },
+                "finish_reason": "stop"
+            }],
+            "events": events  # Include chronological events
+        }
+        if all_tool_calls:
+            result["tool_calls_executed"] = all_tool_calls
+        return JSONResponse(content=result)
 
 
 @app.get("/health")

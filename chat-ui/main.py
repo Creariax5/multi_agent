@@ -56,15 +56,19 @@ async def chat(request: Request):
                             try:
                                 chunk = json.loads(data_str)
                                 
-                                # Forward tool calls info
-                                if chunk.get("type") == "tool_calls":
+                                # Forward tool call events
+                                if chunk.get("type") == "tool_call":
                                     yield f"data: {json.dumps(chunk)}\n\n"
                                     continue
                                 
+                                # Forward thinking events
+                                if chunk.get("type") == "thinking":
+                                    yield f"data: {json.dumps(chunk)}\n\n"
+                                    continue
+                                
+                                # Forward message content (keep original format for JS)
                                 if "choices" in chunk and len(chunk["choices"]) > 0:
-                                    delta = chunk["choices"][0].get("delta", {})
-                                    if "content" in delta:
-                                        yield f"data: {json.dumps({'content': delta['content']})}\n\n"
+                                    yield f"data: {json.dumps(chunk)}\n\n"
                             except json.JSONDecodeError:
                                 pass
                         elif line.strip():
