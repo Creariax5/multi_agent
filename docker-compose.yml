@@ -1,0 +1,36 @@
+services:
+  copilot-proxy:
+    build: ./copilot-proxy
+    container_name: copilot-proxy
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - COPILOT_TOKEN=${COPILOT_TOKEN}
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1
+      - no_proxy=localhost,127.0.0.1
+
+  chat-ui:
+    build: ./chat-ui
+    container_name: chat-ui
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - copilot-proxy
+    environment:
+      - COPILOT_PROXY_URL=http://copilot-proxy:8080/v1
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - NO_PROXY=copilot-proxy,localhost,127.0.0.1
+      - no_proxy=copilot-proxy,localhost,127.0.0.1
+
+networks:
+  default:
+    driver: bridge
