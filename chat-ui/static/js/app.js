@@ -120,7 +120,7 @@ async function sendMessage() {
             ConversationManager.addMessage({
                 role: 'assistant',
                 content: result.content,
-                model: EventHandlers.currentModel || modelSelect.value,
+                model: EventHandlers.model || modelSelect.value,
                 tool_calls: result.toolCalls.length > 0 ? result.toolCalls : undefined,
                 events: result.events.length > 0 ? result.events : undefined
             });
@@ -185,110 +185,40 @@ function renderMessage(message) {
 }
 
 function createThinkingBlockForRender(content) {
-    const div = document.createElement('div');
-    div.className = 'thinking-block';
-    div.innerHTML = `
-        <div class="thinking-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <span class="thinking-icon">💭</span>
-            <span class="thinking-label">Réflexion</span>
-            <span class="thinking-toggle">▼</span>
-        </div>
-        <div class="thinking-content">${marked.parse(content)}</div>
-    `;
-    return div;
+    const block = UIBuilders.thinkingBlock();
+    block.querySelector('.thinking-content').innerHTML = marked.parse(content);
+    return block;
 }
 
 function createArtifactIndicatorForRender(event) {
-    const artifactId = event.artifactId;
-    const title = event.title;
-    const content = event.content;
-    const type = event.artifact_type || 'html';
-
-    const div = document.createElement('div');
-    div.className = 'artifact-indicator';
-    div.innerHTML = `
-        <div class="artifact-indicator-header">
-            <span class="artifact-icon">📄</span>
-            <span class="artifact-name">${Utils.escapeHtml(title)}</span>
-            <span class="artifact-version">V1</span>
-            <span class="artifact-action">Voir →</span>
-        </div>
-    `;
-    div.onclick = () => {
-        // Restore artifact if it was deleted
-        if (!ArtifactManager.artifacts[artifactId]) {
-            ArtifactManager.artifacts[artifactId] = {
-                title: title,
-                type: type,
-                versions: [{ content: content, timestamp: Date.now() }]
-            };
-            ArtifactManager.save();
-        }
-        ArtifactManager.select(artifactId);
-    };
-    return div;
+    return UIBuilders.artifactIndicator(
+        event.title, 
+        event.artifactId, 
+        event.content, 
+        event.artifact_type
+    );
 }
 
 function createEditIndicatorForRender(event) {
-    const div = document.createElement('div');
-    div.className = 'artifact-indicator artifact-edit';
-    const opLabels = {
-        'replace': '✏️',
-        'insert_after': '➕',
-        'insert_before': '➕',
-        'delete': '🗑️',
-        'set_style': '🎨',
-        'set_attribute': '⚙️',
-        'append': '➕',
-        'prepend': '➕'
-    };
-    const icon = opLabels[event.operation] || '✏️';
-    const versionNum = event.version || '?';
+    // Build artifactInfo from saved event data
+    const artifactInfo = event.artifactId ? {
+        artifactId: event.artifactId,
+        title: event.title || 'Artifact',
+        type: event.artifact_type || 'html',
+        versionContent: event.content || '',
+        allVersions: []
+    } : null;
     
-    div.innerHTML = `
-        <div class="artifact-indicator-header">
-            <span class="artifact-icon">${icon}</span>
-            <span class="artifact-name">${Utils.escapeHtml(event.description)}</span>
-            <span class="artifact-version">V${versionNum}</span>
-            <span class="artifact-action">Voir →</span>
-        </div>
-    `;
-    
-    const targetVersion = (event.version || 1) - 1;
-    div.onclick = () => {
-        ArtifactManager.selectVersion(targetVersion);
-        ArtifactManager.open();
-    };
-    return div;
+    return UIBuilders.editIndicator(
+        event,
+        event.version || 1,
+        { success: event.success !== false, error: event.error },
+        artifactInfo
+    );
 }
 
 function createToolCallForRender(tc) {
-    const div = document.createElement('div');
-    div.className = 'tool-call';
-    div.onclick = function() { this.classList.toggle('expanded'); };
-
-    let resultParsed, argsParsed;
-    try { resultParsed = JSON.parse(tc.result); } catch { resultParsed = tc.result; }
-    try { argsParsed = JSON.parse(tc.arguments); } catch { argsParsed = tc.arguments; }
-
-    div.innerHTML = `
-        <div class="tool-call-header">
-            <span class="tool-icon">🔧</span>
-            <span class="tool-name">${Utils.escapeHtml(tc.name)}</span>
-            <span class="tool-status">✓</span>
-        </div>
-        <div class="tool-call-body">
-            <div class="tool-section">
-                <div class="tool-section-title">Arguments</div>
-                <div class="tool-section-content">${Utils.escapeHtml(JSON.stringify(argsParsed, null, 2))}</div>
-            </div>
-            <div class="tool-section">
-                <div class="tool-section-title">Résultat</div>
-                <div class="tool-section-content">${Utils.escapeHtml(JSON.stringify(resultParsed, null, 2))}</div>
-            </div>
-        </div>
-    `;
-    return div;
+    return UIBuilders.toolCall(tc);
 }
 
 function newChat() {

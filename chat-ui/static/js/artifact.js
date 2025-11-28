@@ -84,6 +84,44 @@ const ArtifactManager = {
         this.renderVersions();
     },
 
+    // ==================== STRING REPLACE (simple & reliable) ====================
+
+    replaceString(oldString, newString) {
+        console.log('ArtifactManager.replaceString called');
+        console.log('  activeId:', this.activeId);
+        console.log('  activeVersion:', this.activeVersion);
+        
+        const art = this.artifacts[this.activeId];
+        if (!art) {
+            console.log('  ERROR: No active artifact');
+            return { success: false, error: 'No active artifact' };
+        }
+        
+        const currentContent = art.versions[this.activeVersion]?.content || '';
+        console.log('  currentContent length:', currentContent.length);
+        console.log('  oldString length:', oldString?.length);
+        console.log('  includes:', currentContent.includes(oldString));
+        
+        if (!currentContent.includes(oldString)) {
+            console.log('  ERROR: String not found');
+            console.log('  First 100 chars of oldString:', oldString?.substring(0, 100));
+            return { success: false, error: 'String not found in artifact' };
+        }
+        
+        // Count occurrences
+        const count = (currentContent.match(new RegExp(oldString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        
+        // Replace first occurrence only (like Copilot)
+        const newContent = currentContent.replace(oldString, newString);
+        
+        // Save as new version
+        this.addVersion(newContent);
+        this.renderContent();
+        
+        console.log('  SUCCESS: replaced', count, 'occurrence(s)');
+        return { success: true, replacements: 1, totalFound: count };
+    },
+
     delete(id) {
         delete this.artifacts[id];
         if (this.activeId === id) {

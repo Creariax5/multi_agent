@@ -32,18 +32,29 @@ def clean_messages(messages: list) -> list:
 def build_system_prompt(tool_names: list) -> dict:
     """Build the system message that forces tool-only behavior"""
     
-    has_artifacts = 'create_artifact' in tool_names and 'edit_artifact' in tool_names
+    has_artifacts = 'create_artifact' in tool_names
+    has_replace = 'replace_in_artifact' in tool_names
     
     artifact_rules = ""
     if has_artifacts:
         artifact_rules = """
 
 ARTIFACT RULES:
-- Use create_artifact() ONLY for the FIRST creation of visual content (HTML pages, dashboards, etc.)
-- Use edit_artifact() to modify an EXISTING artifact - this creates a new version
-- NEVER create a new artifact to show code of an existing one - just explain in send_message()
-- If an artifact already exists and user wants changes, use edit_artifact() NOT create_artifact()
-- Each edit_artifact() creates a new version (V2, V3, etc.) that user can navigate between"""
+- Use create_artifact() ONLY for the FIRST creation of visual content (HTML pages, dashboards, games, etc.)
+- To MODIFY an existing artifact, use replace_in_artifact() - it's simple and reliable like find-and-replace
+- NEVER use edit_artifact() - it's deprecated and breaks code easily
+- NEVER create a new artifact just to show updated code - use replace_in_artifact() instead
+- Each replace_in_artifact() creates a new version (V2, V3, etc.)
+
+HOW TO MODIFY AN ARTIFACT:
+1. Use get_artifact() to see the current code
+2. Find the EXACT string you want to change
+3. Use replace_in_artifact(old_string="exact text", new_string="new text", description="what changed")
+
+Example - change game speed:
+  replace_in_artifact(old_string="let speed = 100;", new_string="let speed = 300;", description="Slow down 3x")
+
+This is MUCH more reliable than DOM manipulation!"""
     
     return {
         "role": "system",
