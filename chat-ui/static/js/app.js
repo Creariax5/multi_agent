@@ -104,7 +104,7 @@ async function sendMessage() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         // Initialize handlers
-        EventHandlers.init(eventsContainer, messagesContainer, responseDiv);
+        EventHandlers.init(eventsContainer, messagesContainer, responseDiv, assistantDiv);
 
         // Parse SSE stream
         const parser = new SSEParser(
@@ -120,6 +120,7 @@ async function sendMessage() {
             ConversationManager.addMessage({
                 role: 'assistant',
                 content: result.content,
+                model: EventHandlers.currentModel || modelSelect.value,
                 tool_calls: result.toolCalls.length > 0 ? result.toolCalls : undefined,
                 events: result.events.length > 0 ? result.events : undefined
             });
@@ -138,10 +139,11 @@ function renderMessage(message) {
     const div = document.createElement('div');
     div.className = `message ${message.role}`;
     const avatar = message.role === 'user' ? '👤' : '🤖';
+    const modelTitle = message.model ? `title="${message.model}"` : '';
 
     if (message.role === 'assistant' && message.events?.length > 0) {
         div.innerHTML = `
-            <div class="message-avatar">${avatar}</div>
+            <div class="message-avatar" ${modelTitle}>${avatar}</div>
             <div class="message-content">
                 <div class="events-container"></div>
             </div>
@@ -153,6 +155,8 @@ function renderMessage(message) {
                 container.appendChild(createThinkingBlockForRender(event.content));
             } else if (event.type === 'artifact') {
                 container.appendChild(createArtifactIndicatorForRender(event));
+            } else if (event.type === 'artifact_edit') {
+                container.appendChild(createEditIndicatorForRender(event));
             } else if (event.type === 'tool_call') {
                 container.appendChild(createToolCallForRender(event.tool_call));
             } else if (event.type === 'text') {
@@ -168,7 +172,7 @@ function renderMessage(message) {
             : Utils.escapeHtml(message.content).replace(/\n/g, '<br>');
         
         div.innerHTML = `
-            <div class="message-avatar">${avatar}</div>
+            <div class="message-avatar" ${modelTitle}>${avatar}</div>
             <div class="message-content">
                 <div class="response-text">${content}</div>
             </div>
@@ -195,25 +199,65 @@ function createThinkingBlockForRender(content) {
 }
 
 function createArtifactIndicatorForRender(event) {
-    const artifactId = event.artifactId || ArtifactManager.generateId();
-    ArtifactManager.save(artifactId, {
-        title: event.title,
-        content: event.content,
-        artifact_type: event.artifact_type
-    });
+    const artifactId = event.artifactId;
+    const title = event.title;
+    const content = event.content;
+    const type = event.artifact_type || 'html';
 
     const div = document.createElement('div');
     div.className = 'artifact-indicator';
     div.innerHTML = `
         <div class="artifact-indicator-header">
             <span class="artifact-icon">📄</span>
-            <span class="artifact-name">${Utils.escapeHtml(event.title)}</span>
+            <span class="artifact-name">${Utils.escapeHtml(title)}</span>
+            <span class="artifact-version">V1</span>
             <span class="artifact-action">Voir →</span>
         </div>
     `;
     div.onclick = () => {
-        const art = ArtifactManager.get(artifactId);
-        if (art) ArtifactManager.render(art.title, art.content, art.artifact_type);
+        // Restore artifact if it was deleted
+        if (!ArtifactManager.artifacts[artifactId]) {
+            ArtifactManager.artifacts[artifactId] = {
+                title: title,
+                type: type,
+                versions: [{ content: content, timestamp: Date.now() }]
+            };
+            ArtifactManager.save();
+        }
+        ArtifactManager.select(artifactId);
+    };
+    return div;
+}
+
+function createEditIndicatorForRender(event) {
+    const div = document.createElement('div');
+    div.className = 'artifact-indicator artifact-edit';
+    const opLabels = {
+        'replace': '✏️',
+        'insert_after': '➕',
+        'insert_before': '➕',
+        'delete': '🗑️',
+        'set_style': '🎨',
+        'set_attribute': '⚙️',
+        'append': '➕',
+        'prepend': '➕'
+    };
+    const icon = opLabels[event.operation] || '✏️';
+    const versionNum = event.version || '?';
+    
+    div.innerHTML = `
+        <div class="artifact-indicator-header">
+            <span class="artifact-icon">${icon}</span>
+            <span class="artifact-name">${Utils.escapeHtml(event.description)}</span>
+            <span class="artifact-version">V${versionNum}</span>
+            <span class="artifact-action">Voir →</span>
+        </div>
+    `;
+    
+    const targetVersion = (event.version || 1) - 1;
+    div.onclick = () => {
+        ArtifactManager.selectVersion(targetVersion);
+        ArtifactManager.open();
     };
     return div;
 }

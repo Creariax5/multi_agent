@@ -5,30 +5,40 @@ const EventHandlers = {
     eventsContainer: null,
     messagesContainer: null,
     responseDiv: null,
+    assistantDiv: null,
     messageEvents: [],
     currentContent: '',
     fullContent: '',
     toolCallsExecuted: [],
+    currentModel: null,
 
-    init(eventsContainer, messagesContainer, responseDiv) {
+    init(eventsContainer, messagesContainer, responseDiv, assistantDiv) {
         this.eventsContainer = eventsContainer;
         this.messagesContainer = messagesContainer;
         this.responseDiv = responseDiv;
+        this.assistantDiv = assistantDiv;
         this.messageEvents = [];
         this.currentContent = '';
         this.fullContent = '';
         this.toolCallsExecuted = [];
+        this.currentModel = null;
     },
 
     handle(event) {
         const type = event.type;
         
-        if (type === 'thinking' || type === 'thinking_delta') {
+        if (type === 'model_info') {
+            this.handleModelInfo(event);
+        } else if (type === 'thinking' || type === 'thinking_delta') {
             this.handleThinking(event);
         } else if (type === 'artifact') {
             this.handleArtifact(event);
         } else if (type === 'artifact_edit') {
             this.handleArtifactEdit(event);
+        } else if (type === 'batch_artifact_edit') {
+            this.handleBatchArtifactEdit(event);
+        } else if (type === 'get_artifact') {
+            this.handleGetArtifact(event);
         } else if (type === 'tool_call') {
             this.handleToolCall(event);
         } else if (event.choices?.[0]?.delta?.content) {
@@ -71,15 +81,8 @@ const EventHandlers = {
     handleArtifact(event) {
         console.log('HANDLING ARTIFACT:', event.title);
         
-        const artifactId = ArtifactManager.generateId();
-        ArtifactManager.save(artifactId, {
-            title: event.title,
-            content: event.content,
-            artifact_type: event.artifact_type
-        });
-
-        // Render immediately
-        ArtifactManager.render(event.title, event.content, event.artifact_type);
+        // Create new artifact
+        const artifactId = ArtifactManager.create(event.title, event.content, event.artifact_type || 'html');
 
         // Save for history
         this.messageEvents.push({
@@ -91,7 +94,7 @@ const EventHandlers = {
         });
 
         // Add indicator in chat
-        const indicator = this.createArtifactIndicator(event.title, artifactId);
+        const indicator = this.createArtifactIndicator(event.title, artifactId, event.content, event.artifact_type);
         this.eventsContainer.appendChild(indicator);
         this.scrollToBottom();
     },
@@ -99,13 +102,16 @@ const EventHandlers = {
     handleArtifactEdit(event) {
         console.log('HANDLING ARTIFACT EDIT:', event.description);
         
-        // Apply the edit to the current artifact
-        const success = ArtifactManager.applyEdit(
+        // Apply the edit (creates a new version) - now returns object with success/error
+        const result = ArtifactManager.applyEdit(
             event.selector,
             event.operation,
             event.content,
             event.attribute
         );
+        
+        // Get current version number
+        const versionNum = ArtifactManager.getCurrentVersion();
 
         // Save for history
         this.messageEvents.push({
@@ -115,13 +121,50 @@ const EventHandlers = {
             content: event.content,
             attribute: event.attribute,
             description: event.description,
-            success: success
+            success: result.success,
+            error: result.error,
+            version: versionNum
         });
 
         // Add edit indicator in chat
-        const indicator = this.createEditIndicator(event);
+        const indicator = this.createEditIndicator(event, versionNum, result);
         this.eventsContainer.appendChild(indicator);
         this.scrollToBottom();
+    },
+
+    handleBatchArtifactEdit(event) {
+        console.log('HANDLING BATCH EDIT:', event.description, event.operations?.length, 'ops');
+        
+        const result = ArtifactManager.applyBatchEdit(event.operations, event.dry_run);
+        const versionNum = ArtifactManager.getCurrentVersion();
+
+        // Save for history
+        this.messageEvents.push({
+            type: 'batch_artifact_edit',
+            description: event.description,
+            operations: event.operations,
+            result: result,
+            version: versionNum
+        });
+
+        // Add batch indicator in chat
+        const indicator = this.createBatchEditIndicator(event, result, versionNum);
+        this.eventsContainer.appendChild(indicator);
+        this.scrollToBottom();
+    },
+
+    handleGetArtifact(event) {
+        console.log('HANDLING GET ARTIFACT:', event.selector || 'full');
+        
+        const result = ArtifactManager.getContent(event.selector, event.include_styles);
+        
+        // Log the structure for debugging
+        if (result.success) {
+            console.log('Artifact structure:', JSON.stringify(result.structure || result, null, 2));
+        }
+        
+        // This would need backend integration to return to LLM
+        // For now, just log it
     },
 
     handleToolCall(event) {
@@ -136,8 +179,14 @@ const EventHandlers = {
     },
 
     handleTextDelta(content) {
-        this.fullContent += content;
-        this.currentContent += content;
+        // Unescape JSON string escapes
+        const unescaped = content
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+        
+        this.fullContent += unescaped;
+        this.currentContent += unescaped;
         this.responseDiv.innerHTML = marked.parse(this.currentContent) + '<span class="streaming-cursor">▊</span>';
         this.scrollToBottom();
     },
@@ -145,6 +194,18 @@ const EventHandlers = {
     handleHistoryUpdate(event) {
         // Handle conversation summarization
         console.log('History update received');
+    },
+
+    handleModelInfo(event) {
+        this.currentModel = event.model;
+        // Update avatar tooltip
+        if (this.assistantDiv) {
+            const avatar = this.assistantDiv.querySelector('.message-avatar');
+            if (avatar) {
+                avatar.title = event.model;
+                avatar.dataset.model = event.model;
+            }
+        }
     },
 
     flushTextContent() {
@@ -195,26 +256,35 @@ const EventHandlers = {
         return div;
     },
 
-    createArtifactIndicator(title, artifactId) {
+    createArtifactIndicator(title, artifactId, content, type) {
         const div = document.createElement('div');
         div.className = 'artifact-indicator';
         div.innerHTML = `
             <div class="artifact-indicator-header">
                 <span class="artifact-icon">📄</span>
                 <span class="artifact-name">${Utils.escapeHtml(title)}</span>
+                <span class="artifact-version">V1</span>
                 <span class="artifact-action">Voir →</span>
             </div>
         `;
         div.onclick = () => {
-            const art = ArtifactManager.get(artifactId);
-            if (art) ArtifactManager.render(art.title, art.content, art.artifact_type);
+            // Restore artifact if it was deleted
+            if (!ArtifactManager.artifacts[artifactId]) {
+                ArtifactManager.artifacts[artifactId] = {
+                    title: title,
+                    type: type || 'html',
+                    versions: [{ content: content, timestamp: Date.now() }]
+                };
+                ArtifactManager.save();
+            }
+            ArtifactManager.select(artifactId);
         };
         return div;
     },
 
-    createEditIndicator(event) {
+    createEditIndicator(event, versionNum, result = { success: true }) {
         const div = document.createElement('div');
-        div.className = 'artifact-indicator artifact-edit';
+        div.className = 'artifact-indicator artifact-edit' + (result.success ? '' : ' edit-failed');
         const opLabels = {
             'replace': '✏️',
             'insert_after': '➕',
@@ -223,22 +293,55 @@ const EventHandlers = {
             'set_style': '🎨',
             'set_attribute': '⚙️',
             'append': '➕',
-            'prepend': '➕'
+            'prepend': '➕',
+            'replace_outer': '🔄',
+            'wrap': '📦',
+            'unwrap': '📤',
+            'clear': '🧹'
         };
         const icon = opLabels[event.operation] || '✏️';
+        const statusIcon = result.success ? '' : ' ⚠️';
+        const errorText = result.error ? ` <span class="edit-error">(${result.error})</span>` : '';
+        
         div.innerHTML = `
             <div class="artifact-indicator-header">
-                <span class="artifact-icon">${icon}</span>
-                <span class="artifact-name">${Utils.escapeHtml(event.description)}</span>
-                <span class="artifact-selector">${Utils.escapeHtml(event.selector)}</span>
+                <span class="artifact-icon">${icon}${statusIcon}</span>
+                <span class="artifact-name">${Utils.escapeHtml(event.description)}${errorText}</span>
+                <span class="artifact-version">V${versionNum}</span>
                 <span class="artifact-action">Voir →</span>
             </div>
         `;
-        // Clicking opens the artifact panel
+        const targetVersion = versionNum - 1;
         div.onclick = () => {
-            if (!ArtifactManager.panel.classList.contains('open')) {
-                ArtifactManager.panel.classList.add('open');
-            }
+            ArtifactManager.selectVersion(targetVersion);
+            ArtifactManager.open();
+        };
+        return div;
+    },
+
+    createBatchEditIndicator(event, result, versionNum) {
+        const div = document.createElement('div');
+        const allSuccess = result.applied === result.total;
+        div.className = 'artifact-indicator artifact-batch-edit' + (allSuccess ? '' : ' partial-success');
+        
+        const statusText = result.dryRun 
+            ? `🔍 Dry run: ${result.results.length} ops validated`
+            : `${result.applied}/${result.total} ops applied`;
+        
+        div.innerHTML = `
+            <div class="artifact-indicator-header">
+                <span class="artifact-icon">📦</span>
+                <span class="artifact-name">${Utils.escapeHtml(event.description)}</span>
+                <span class="artifact-batch-status">${statusText}</span>
+                <span class="artifact-version">V${versionNum}</span>
+                <span class="artifact-action">Voir →</span>
+            </div>
+        `;
+        
+        const targetVersion = versionNum - 1;
+        div.onclick = () => {
+            ArtifactManager.selectVersion(targetVersion);
+            ArtifactManager.open();
         };
         return div;
     },

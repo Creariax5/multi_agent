@@ -6,7 +6,7 @@ def get_definition():
         "type": "function",
         "function": {
             "name": "create_artifact",
-            "description": "IMPORTANT: Use this tool to create and display HTML pages, code snippets, or formatted content in a dedicated side panel. When user asks for a 'dashboard', 'page', 'website', 'HTML', 'code example', or 'artifact', YOU MUST use this tool. The content will be rendered visually for the user.",
+            "description": "Create a NEW visual artifact (HTML page, dashboard, website, code example) displayed in a side panel. ONLY use this for FIRST creation. If an artifact already exists and user wants modifications, use edit_artifact() instead. Do NOT create a new artifact just to show code - use send_message() for explanations.",
             "parameters": {
                 "type": "object",
                 "properties": {

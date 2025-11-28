@@ -8,24 +8,32 @@ def get_definition():
         "type": "function",
         "function": {
             "name": "edit_artifact",
-            "description": """Make targeted edits to an existing artifact WITHOUT rewriting everything.
-Use this to modify specific parts of an HTML artifact.
+            "description": """Make targeted edits to an existing HTML artifact WITHOUT rewriting everything.
+
+IMPORTANT RULES:
+- NEVER use 'replace' on 'body' - it removes the <head> with CSS styles!
+- Use 'append' or 'prepend' on 'body' or 'main' to add sections
+- Target specific elements like 'header', 'main', 'section', '#id', etc.
+- Use get_artifact() first to see the current structure!
 
 Operations:
-- replace: Replace the innerHTML of an element matching the selector
+- replace: Replace innerHTML of a SPECIFIC element (NOT body!)
+- replace_outer: Replace the entire element including its tag
 - insert_after: Insert HTML after an element
 - insert_before: Insert HTML before an element  
 - delete: Remove an element
-- set_style: Change CSS properties of an element
-- set_attribute: Change an attribute of an element
-- append: Append content inside an element (at the end)
-- prepend: Prepend content inside an element (at the start)
+- set_style: Change CSS properties
+- append: Add content at the end of an element
+- prepend: Add content at the start of an element
+- wrap: Wrap element in a new container
+- unwrap: Remove wrapper, keep children
+- clear: Empty an element's content
 
 Examples:
-- Change header text: selector="#header h1", operation="replace", content="New Title"
-- Add new section: selector="#about", operation="insert_after", content="<section id='contact'>...</section>"
-- Change background: selector="body", operation="set_style", content="background: #f0f0f0"
-- Delete element: selector="#old-section", operation="delete"
+- Add section: selector="main", operation="append", content="<section>...</section>"
+- Change title: selector="header h1", operation="replace", content="New Title"
+- Change color: selector="body", operation="set_style", content="background: blue"
+- Replace card: selector=".card:first-child", operation="replace_outer", content="<div class='card'>...</div>"
 """,
             "parameters": {
                 "type": "object",
@@ -36,12 +44,12 @@ Examples:
                     },
                     "operation": {
                         "type": "string",
-                        "enum": ["replace", "insert_after", "insert_before", "delete", "set_style", "set_attribute", "append", "prepend"],
+                        "enum": ["replace", "replace_outer", "insert_after", "insert_before", "delete", "set_style", "set_attribute", "append", "prepend", "wrap", "unwrap", "clear"],
                         "description": "The type of edit operation to perform"
                     },
                     "content": {
                         "type": "string",
-                        "description": "The new HTML content, CSS styles, or attribute value (not needed for delete)"
+                        "description": "The new HTML content, CSS styles, or attribute value (not needed for delete/clear/unwrap)"
                     },
                     "attribute": {
                         "type": "string",
