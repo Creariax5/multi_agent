@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Copilot Chat</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/artifact.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
@@ -75,8 +76,27 @@
                 </div>
             </div>
         </main>
+
+        <!-- Artifact Panel -->
+        <aside class="artifact-panel" id="artifact-panel">
+            <div class="artifact-header">
+                <span class="artifact-title" id="artifact-title">Artifact</span>
+                <div class="artifact-controls">
+                    <button class="artifact-close-btn" onclick="ArtifactManager.close()">×</button>
+                </div>
+            </div>
+            <div class="artifact-content" id="artifact-content">
+                <!-- Content will be injected here -->
+            </div>
+        </aside>
     </div>
 
-    <script src="/static/app.js"></script>
+    <!-- JavaScript Modules -->
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/sse-parser.js"></script>
+    <script src="/static/js/artifact.js"></script>
+    <script src="/static/js/conversations.js"></script>
+    <script src="/static/js/event-handlers.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

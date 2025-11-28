@@ -1,54 +1,55 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
-- [x] Verify that the copilot-instructions.md file in the .github directory is created.
+# Multi-Agent Copilot Chat
 
-- [x] Clarify Project Requirements
-	<!-- Ask for project type, language, and frameworks if not specified. Skip if already provided. -->
+A Claude-like chat interface powered by GitHub Copilot with MCP (Model Context Protocol) tools support.
 
-- [x] Scaffold the Project
-	<!--
-	Ensure that the previous step has been marked as completed.
-	Call project setup tool with projectType parameter.
-	Run scaffolding command to create project files and folders.
-	Use '.' as the working directory.
-	If no appropriate projectType is available, search documentation using available tools.
-	Otherwise, create the project structure manually using available file creation tools.
-	-->
+## Project Structure
 
-- [x] Customize the Project
-	<!--
-	Verify that all previous steps have been completed successfully and you have marked the step as completed.
-	Develop a plan to modify codebase according to user requirements.
-	Apply modifications using appropriate tools and user-provided references.
-	Skip this step for "Hello World" projects.
-	-->
+```
+multi_agent/
+├── chat-ui/           # Frontend Flask application (port 3000)
+│   ├── main.py        # FastAPI server
+│   ├── static/
+│   │   ├── js/        # Modular JavaScript
+│   │   │   ├── app.js          # Main application logic
+│   │   │   ├── artifact.js     # Artifact panel management
+│   │   │   ├── conversations.js # Conversation state
+│   │   │   ├── event-handlers.js # SSE event processing
+│   │   │   ├── sse-parser.js   # SSE stream parsing
+│   │   │   └── utils.js        # Utility functions
+│   │   ├── style.css
+│   │   └── artifact.css
+│   └── templates/
+│       └── index.html
+├── copilot-proxy/     # Agentic proxy server (port 8080)
+│   └── main.py        # Tool execution loop
+├── mcp-server/        # MCP tool server (port 8081)
+│   ├── main.py
+│   └── tools/         # Tool implementations
+│       ├── think.py
+│       ├── send_message.py
+│       ├── create_artifact.py
+│       ├── web_search.py
+│       └── ...
+└── docker-compose.yaml
+```
 
-- [x] Install Required Extensions
-	<!-- ONLY install extensions provided mentioned in the get_project_setup_info. Skip this step otherwise and mark as completed. -->
+## Key Features
 
-- [x] Compile the Project
-	<!--
-	Verify that all previous steps have been completed.
-	Install any missing dependencies.
-	Run diagnostics and resolve any issues.
-	Check for markdown files in project folder for relevant instructions on how to do this.
-	-->
+- **Artifacts Panel**: Create and display HTML, code, or markdown in a side panel (like Claude)
+- **MCP Tools**: Extensible tool system with think, send_message, web_search, etc.
+- **Streaming**: Real-time SSE streaming with thinking deltas
+- **Conversation History**: Local storage persistence
 
-- [x] Create and Run Task
-	<!--
-	Verify that all previous steps have been completed.
-	Check https://code.visualstudio.com/docs/debugtest/tasks to determine if the project needs a task. If so, use the create_and_run_task to create and launch a task based on package.json, README.md, and project structure.
-	Skip this step otherwise.
-	 -->
+## Running the Project
 
-- [x] Launch the Project
-	<!--
-	Verify that all previous steps have been completed.
-	Prompt user for debug mode, launch only if confirmed.
-	 -->
+```bash
+docker compose up --build
+```
 
-- [x] Ensure Documentation is Complete
-	<!--
-	Verify that all previous steps have been completed.
-	Verify that README.md and the copilot-instructions.md file in the .github directory exists and contains current project information.
-	Clean up the copilot-instructions.md file in the .github directory by removing all HTML comments.
-	 -->
+Access at http://localhost:3000
+
+## Adding New Tools
+
+1. Create a new Python file in `mcp-server/tools/`
+2. Implement `get_definition()`, `execute()`, and optionally `to_event()`
+3. The tool is auto-discovered on server restart

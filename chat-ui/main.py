@@ -56,17 +56,14 @@ async def chat(request: Request):
                             try:
                                 chunk = json.loads(data_str)
                                 
-                                # Forward tool call events
-                                if chunk.get("type") == "tool_call":
+                                # Forward ALL event types to the frontend
+                                event_type = chunk.get("type")
+                                if event_type in ("tool_call", "thinking", "thinking_delta", 
+                                                  "artifact", "artifact_edit", "history_update", "message_delta"):
                                     yield f"data: {json.dumps(chunk)}\n\n"
                                     continue
                                 
-                                # Forward thinking events
-                                if chunk.get("type") == "thinking":
-                                    yield f"data: {json.dumps(chunk)}\n\n"
-                                    continue
-                                
-                                # Forward message content (keep original format for JS)
+                                # Forward message content (chat completion chunks)
                                 if "choices" in chunk and len(chunk["choices"]) > 0:
                                     yield f"data: {json.dumps(chunk)}\n\n"
                             except json.JSONDecodeError:

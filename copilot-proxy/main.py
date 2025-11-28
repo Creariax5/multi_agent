@@ -538,6 +538,7 @@ IMPORTANT: think() shows your reasoning process, send_message() shows the final 
                 # Ask MCP server to convert to UI event
                 if handler.get("has_to_event"):
                     event = await tool_to_event(tc_name, tc_args, tc_result)
+                    print(f"    to_event returned: {event}")
                     if event:
                         # Special case: send_message
                         if tc_name == "send_message" and tc.get("streamed", False):
@@ -570,12 +571,19 @@ IMPORTANT: think() shows your reasoning process, send_message() shows the final 
     if stream:
         async def stream_response():
             async for event in agentic_loop():
+                print(f"STREAMING EVENT: {event.get('type')}")
                 if event["type"] == "tool_call":
                     yield f"data: {json.dumps({'type': 'tool_call', 'tool_call': event['tool_call']})}\n\n"
                 elif event["type"] == "thinking":
                     yield f"data: {json.dumps({'type': 'thinking', 'content': event['content']})}\n\n"
                 elif event["type"] == "thinking_delta":
                     yield f"data: {json.dumps({'type': 'thinking_delta', 'content': event['content']})}\n\n"
+                elif event["type"] == "artifact":
+                    print(f"STREAMING ARTIFACT: {event.get('title')}")
+                    yield f"data: {json.dumps({'type': 'artifact', 'content': event['content'], 'title': event['title'], 'artifact_type': event['artifact_type']})}\n\n"
+                elif event["type"] == "artifact_edit":
+                    print(f"STREAMING ARTIFACT EDIT: {event.get('description')}")
+                    yield f"data: {json.dumps({'type': 'artifact_edit', 'selector': event['selector'], 'operation': event['operation'], 'content': event.get('content', ''), 'attribute': event.get('attribute', ''), 'description': event['description']})}\n\n"
                 elif event["type"] == "message_delta":
                     chunk = {
                         "id": "agentic",
