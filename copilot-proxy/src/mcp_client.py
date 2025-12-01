@@ -1,6 +1,4 @@
-"""
-MCP Server client - Tools management and execution
-"""
+"""MCP Server client - Tools management and execution"""
 import json
 import logging
 from typing import Optional
@@ -9,94 +7,57 @@ from src.config import MCP_SERVER_URL
 
 logger = logging.getLogger(__name__)
 
-# Cache for MCP tools and metadata
-_cached_tools = None
-_cached_metas = None
+# Cache
+_cache = {"tools": None, "handlers": None}
+
+
+async def _mcp_request(method: str, path: str, json_data: dict = None, timeout: float = 10.0):
+    """Helper for MCP server requests"""
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            if method == "GET":
+                resp = await client.get(f"{MCP_SERVER_URL}{path}")
+            else:
+                resp = await client.post(f"{MCP_SERVER_URL}{path}", json=json_data)
+            return resp.json() if resp.status_code == 200 else None
+    except Exception as e:
+        logger.error(f"❌ MCP request failed ({path}): {e}")
+        return None
 
 
 async def get_mcp_tools() -> list:
     """Fetch available tools from MCP server"""
-    global _cached_tools
-    
-    if _cached_tools:
-        return _cached_tools
-    
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{MCP_SERVER_URL}/tools")
-            if response.status_code == 200:
-                data = response.json()
-                _cached_tools = data.get("tools", [])
-                logger.info(f"🛠️ Loaded {len(_cached_tools)} tools from MCP server")
-                return _cached_tools
-    except Exception as e:
-        logger.error(f"❌ Failed to fetch MCP tools: {e}")
-    
-    return []
+    if _cache["tools"] is None:
+        data = await _mcp_request("GET", "/tools")
+        if data:
+            _cache["tools"] = data.get("tools", [])
+            logger.info(f"🛠️ Loaded {len(_cache['tools'])} tools from MCP server")
+    return _cache["tools"] or []
 
 
 async def get_tool_handlers() -> dict:
     """Fetch tool handler info from MCP server"""
-    global _cached_metas
-    
-    if _cached_metas is not None:
-        return _cached_metas
-    
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{MCP_SERVER_URL}/tools/handlers")
-            if response.status_code == 200:
-                data = response.json()
-                _cached_metas = data.get("handlers", {})
-                return _cached_metas
-    except Exception as e:
-        logger.error(f"❌ Failed to fetch handlers: {e}")
-    
-    return {}
+    if _cache["handlers"] is None:
+        data = await _mcp_request("GET", "/tools/handlers")
+        _cache["handlers"] = data.get("handlers", {}) if data else {}
+    return _cache["handlers"]
 
 
 async def tool_to_event(name: str, args: dict, result: dict) -> Optional[dict]:
     """Ask MCP server to convert tool call to UI event"""
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.post(
-                f"{MCP_SERVER_URL}/tools/to_event",
-                json={"name": name, "arguments": args, "result": result}
-            )
-            if response.status_code == 200:
-                return response.json().get("event")
-    except:
-        pass
-    return None
+    data = await _mcp_request("POST", "/tools/to_event", {"name": name, "arguments": args, "result": result}, 5.0)
+    return data.get("event") if data else None
 
 
 async def execute_tool_calls(tool_calls: list) -> list:
     """Execute tool calls via MCP server"""
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{MCP_SERVER_URL}/execute_batch",
-                json={"tool_calls": tool_calls}
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("results", [])
-    except Exception as e:
-        logger.error(f"❌ Failed to execute tools: {e}")
-        return [
-            {
-                "tool_call_id": tc.get("id", "unknown"),
-                "role": "tool",
-                "content": json.dumps({"error": str(e)})
-            }
-            for tc in tool_calls
-        ]
-    
-    return []
+    data = await _mcp_request("POST", "/execute_batch", {"tool_calls": tool_calls}, 30.0)
+    if data:
+        return data.get("results", [])
+    return [{"tool_call_id": tc.get("id", "unknown"), "role": "tool", "content": json.dumps({"error": "MCP request failed"})} for tc in tool_calls]
 
 
 def clear_cache():
-    """Clear cached tools and handlers (useful for hot reload)"""
-    global _cached_tools, _cached_metas
-    _cached_tools = None
-    _cached_metas = None
+    """Clear cached tools and handlers"""
+    _cache["tools"] = None
+    _cache["handlers"] = None

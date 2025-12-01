@@ -1,7 +1,5 @@
-"""
-Tool: get_current_time - Get current date and time
-"""
-from datetime import datetime
+"""Tool: get_current_time - Get current date and time"""
+from datetime import datetime, timezone as tz
 
 
 def get_definition():
@@ -13,7 +11,6 @@ def get_definition():
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "timezone": {"type": "string", "default": "UTC"},
                     "format": {"type": "string", "enum": ["iso", "human", "unix"], "default": "human"}
                 },
                 "required": []
@@ -22,18 +19,13 @@ def get_definition():
     }
 
 
-def execute(timezone: str = "UTC", format: str = "human") -> dict:
+def execute(format: str = "human") -> dict:
     """Get current time"""
-    now = datetime.utcnow()
+    now = datetime.now(tz.utc)
     
-    if format == "iso":
-        return {"time": now.isoformat() + "Z", "timezone": timezone}
-    elif format == "unix":
-        return {"timestamp": int(now.timestamp()), "timezone": timezone}
-    else:  # human
-        return {
-            "date": now.strftime("%Y-%m-%d"),
-            "time": now.strftime("%H:%M:%S"),
-            "day": now.strftime("%A"),
-            "timezone": timezone
-        }
+    formats = {
+        "iso": {"time": now.isoformat()},
+        "unix": {"timestamp": int(now.timestamp())},
+        "human": {"date": now.strftime("%Y-%m-%d"), "time": now.strftime("%H:%M:%S"), "day": now.strftime("%A")}
+    }
+    return formats.get(format, formats["human"])

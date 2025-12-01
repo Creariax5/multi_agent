@@ -28,37 +28,6 @@ docker exec -it mcp-server python -c "print('test')"
 docker-compose build mcp-server
 ```
 
-## Project Structure
-
-```
-multi_agent/
-├── chat-ui/           # Frontend Flask application (port 3000)
-│   ├── main.py        # FastAPI server
-│   ├── static/
-│   │   ├── js/        # Modular JavaScript
-│   │   │   ├── app.js          # Main application logic
-│   │   │   ├── artifact.js     # Artifact panel management
-│   │   │   ├── conversations.js # Conversation state
-│   │   │   ├── event-handlers.js # SSE event processing
-│   │   │   ├── sse-parser.js   # SSE stream parsing
-│   │   │   └── utils.js        # Utility functions
-│   │   ├── style.css
-│   │   └── artifact.css
-│   └── templates/
-│       └── index.html
-├── copilot-proxy/     # Agentic proxy server (port 8080)
-│   └── main.py        # Tool execution loop
-├── mcp-server/        # MCP tool server (port 8081)
-│   ├── main.py
-│   └── tools/         # Tool implementations
-│       ├── think.py
-│       ├── send_message.py
-│       ├── create_artifact.py
-│       ├── web_search.py
-│       └── ...
-└── docker-compose.yaml
-```
-
 ## Key Features
 
 - **Artifacts Panel**: Create and display HTML, code, or markdown in a side panel (like Claude)
