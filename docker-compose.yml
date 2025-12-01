@@ -1,17 +1,36 @@
 services:
-  mcp-server:
-    build: ./mcp-server
-    container_name: mcp-server
+  zapier-bridge:
+    build: ./zapier-bridge
+    container_name: zapier-bridge
     restart: always
     ports:
-      - "8081:8081"
+      - "8082:8082"
     environment:
+      - ZAPIER_MCP_URL=${ZAPIER_MCP_URL:-}
+      - ZAPIER_MCP_SECRET=${ZAPIER_MCP_SECRET:-}
       - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
       - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
       - http_proxy=http://proxy-web.cnamts.fr:3128/
       - https_proxy=http://proxy-web.cnamts.fr:3128/
       - NO_PROXY=localhost,127.0.0.1
       - no_proxy=localhost,127.0.0.1
+
+  mcp-server:
+    build: ./mcp-server
+    container_name: mcp-server
+    restart: always
+    ports:
+      - "8081:8081"
+    depends_on:
+      - zapier-bridge
+    environment:
+      - ZAPIER_BRIDGE_URL=http://zapier-bridge:8082
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1,zapier-bridge
+      - no_proxy=localhost,127.0.0.1,zapier-bridge
 
   copilot-proxy:
     build: ./copilot-proxy
@@ -30,6 +49,26 @@ services:
       - https_proxy=http://proxy-web.cnamts.fr:3128/
       - NO_PROXY=localhost,127.0.0.1,mcp-server
       - no_proxy=localhost,127.0.0.1,mcp-server
+
+  event-trigger:
+    build: ./event-trigger
+    container_name: event-trigger
+    restart: always
+    ports:
+      - "8083:8083"
+    depends_on:
+      - copilot-proxy
+    environment:
+      - COPILOT_PROXY_URL=http://copilot-proxy:8080
+      - DEFAULT_MODEL=gpt-4.1
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+      - ENABLED_SOURCES=email,stripe,slack,calendar,zapier,form,custom
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1,copilot-proxy
+      - no_proxy=localhost,127.0.0.1,copilot-proxy
 
   chat-ui:
     build: ./chat-ui
@@ -63,6 +102,33 @@ services:
       - https_proxy=http://proxy-web.cnamts.fr:3128/
       - NO_PROXY=copilot-proxy,localhost,127.0.0.1
       - no_proxy=copilot-proxy,localhost,127.0.0.1
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Paris
+      - TZ=Europe/Paris
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1,event-trigger,copilot-proxy
+      - no_proxy=localhost,127.0.0.1,event-trigger,copilot-proxy
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - event-trigger
+
+volumes:
+  n8n_data:
 
 networks:
   default:
