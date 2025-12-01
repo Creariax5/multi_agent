@@ -2,6 +2,32 @@
 
 A Claude-like chat interface powered by GitHub Copilot with MCP (Model Context Protocol) tools support.
 
+## Architecture Principles
+
+### 🎯 Microservices First (Anti-Monolithic)
+- **One service = One responsibility**: Each feature should be its own isolated service
+- **Loose coupling**: Services communicate via HTTP APIs, not shared code
+- **Independent deployment**: Each service can be updated without affecting others
+- **Separate containers**: Every service runs in its own Docker container
+
+### 🐳 100% Dockerized
+- **NEVER install anything locally** - Everything runs in Docker containers
+- **No local Python/Node/etc.** - Use Docker for all development and testing
+- **docker-compose for orchestration** - All services defined in `docker-compose.yml`
+- **Test inside containers** - Run tests via `docker exec` or dedicated test containers
+
+Example commands:
+```bash
+# Run the project
+docker-compose up --build
+
+# Run a command inside a container
+docker exec -it mcp-server python -c "print('test')"
+
+# Add a new dependency - edit requirements.txt, then rebuild
+docker-compose build mcp-server
+```
+
 ## Project Structure
 
 ```
