@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 
 from src.auth import get_copilot_token
-from src.mcp_client import get_mcp_tools, get_tool_handlers
+from src.mcp_client import get_mcp_tools, get_tool_handlers, clear_cache
 from src.messages import clean_messages
 from src.agentic_loop import run_agentic_loop
 from src.streaming import stream_agentic_events
