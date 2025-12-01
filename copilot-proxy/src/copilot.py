@@ -1,6 +1,7 @@
 """GitHub Copilot API client"""
 import time
 import logging
+from typing import Optional
 import httpx
 from fastapi import HTTPException
 from src.config import GITHUB_COPILOT_TOKEN, COPILOT_API_URL
@@ -49,7 +50,7 @@ def get_headers(token: str, messages: list, stream: bool = True) -> dict:
     }
 
 
-async def make_request(body: dict, token: str) -> dict | None:
+async def make_request(body: dict, token: str) -> Optional[dict]:
     """Make non-streaming request to Copilot API"""
     async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(f"{COPILOT_API_URL}/chat/completions", headers=get_headers(token, body.get("messages", []), False), json=body)

@@ -44,11 +44,15 @@ async def run_agentic_loop(messages: list, copilot_token: str, mcp_tools: list,
             logger.info("No tool calls, exiting")
             break
         
-        # Process tools
+        # Process tools and collect results
         task_done = False
+        tool_results = []
         async for event in process_tools(tool_calls, tool_handlers, copilot_token):
-            if event.get("type") == "terminal":
-                task_done = True
+            if event.get("type") == "_results":
+                tool_results = event["results"]
+                task_done = event.get("task_done", False)
+            elif event.get("type") == "terminal":
+                pass  # Already handled in _results
             else:
                 yield event
         
@@ -56,9 +60,9 @@ async def run_agentic_loop(messages: list, copilot_token: str, mcp_tools: list,
             logger.info("🎉 Task complete")
             break
         
-        # Update messages for next iteration
+        # Update messages for next iteration - add assistant message with tool_calls and tool results
         current_messages.append({"role": "assistant", "tool_calls": tool_calls})
-        # Note: tool results would be added here from process_tools
+        current_messages.extend(tool_results)
     
     logger.info(f"✨ Agentic loop complete")
 

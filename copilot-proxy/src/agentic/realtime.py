@@ -1,4 +1,5 @@
 """Real-time streaming for think() and send_message()"""
+from typing import Optional, Tuple
 
 # Tools that support real-time streaming with their JSON prefix
 STREAMABLE_TOOLS = {
@@ -7,7 +8,7 @@ STREAMABLE_TOOLS = {
 }
 
 
-def extract_delta(tool_name: str, args: str, yielded_len: int) -> tuple[str, int]:
+def extract_delta(tool_name: str, args: str, yielded_len: int) -> Tuple[str, int]:
     """
     Extract new content from streaming tool arguments.
     
@@ -33,7 +34,7 @@ def extract_delta(tool_name: str, args: str, yielded_len: int) -> tuple[str, int
     return new_content, len(args) if new_content else yielded_len
 
 
-def get_event_type(tool_name: str) -> str | None:
+def get_event_type(tool_name: str) -> Optional[str]:
     """Get the event type for a streamable tool"""
     if tool_name in STREAMABLE_TOOLS:
         return STREAMABLE_TOOLS[tool_name][1]

@@ -20,12 +20,15 @@ async def process_tools(tool_calls: list, tool_handlers: dict, copilot_token: st
     Execute tool calls and yield events.
     
     Yields: event dicts or special control events
+    Final yield: {"type": "results", "results": [...], "tool_calls": [...]} for loop to use
     """
     if not tool_calls:
         return
     
     logger.info(f"⚡ Executing {len(tool_calls)} tool(s)...")
     results = await execute_tool_calls(tool_calls)
+    
+    task_done = False
     
     for tc in tool_calls:
         name = tc["function"]["name"]
@@ -46,6 +49,7 @@ async def process_tools(tool_calls: list, tool_handlers: dict, copilot_token: st
         # Terminal tool - signal to stop loop
         if handler.get("is_terminal"):
             logger.info(f"🏁 {name}: Terminal tool")
+            task_done = True
             yield {"type": "terminal", "name": name}
             continue
         
@@ -64,6 +68,9 @@ async def process_tools(tool_calls: list, tool_handlers: dict, copilot_token: st
         # Default: generic tool_call event
         logger.info(f"✅ {name}: done")
         yield {"type": "tool_call", "tool_call": {"name": name, "arguments": args_str, "result": result_str}}
+    
+    # Return results for the loop to add to messages
+    yield {"type": "_results", "results": results, "task_done": task_done}
 
 
 async def _handle_summarize(copilot_token: str):
