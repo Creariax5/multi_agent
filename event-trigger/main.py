@@ -1,29 +1,23 @@
 """
 Event Trigger Service
 
-Receives webhooks from various sources (email, Stripe, Slack, etc.)
-and triggers AI processing with source-specific instructions.
+Receives webhooks from various sources and triggers AI processing.
+Sources are auto-discovered from the sources/ directory.
 
-Endpoints:
-- POST /webhook/{source} - Receive webhook from any source
-- POST /webhook/email - Receive email notifications
-- POST /webhook/stripe - Receive Stripe webhooks
-- POST /webhook/slack - Receive Slack events
-- POST /webhook/zapier - Receive Zapier webhooks
-- POST /trigger - Manual trigger with custom source
-- GET /history - View recent processed events
-- GET /instructions/{source} - View instructions for a source
+Add a new source by creating a .py file in sources/ with:
+  - get_definition() -> dict
+  - get_instructions() -> str
+  - format_event(data) -> str
 """
-import json
 import logging
 from typing import Optional
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Dict
 
-from config import ENABLED_SOURCES, WEBHOOK_SECRET
-from instructions import INSTRUCTIONS, get_instructions
+from config import WEBHOOK_SECRET
+from sources import registry
 from event_processor import event_processor
 
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Event Trigger Service",
-    description="Webhook receiver that triggers AI processing"
+    description="Webhook receiver that triggers AI processing - Sources are auto-discovered"
 )
 
 
@@ -57,17 +51,11 @@ class WebhookResponse(BaseModel):
 # Helpers
 # ============================================================================
 
-def validate_source(source: str) -> bool:
-    """Check if source is enabled"""
-    return source.lower() in [s.strip().lower() for s in ENABLED_SOURCES]
-
-
 def validate_webhook_secret(request: Request) -> bool:
     """Validate webhook secret if configured"""
     if not WEBHOOK_SECRET:
         return True
     
-    # Check various header locations for secret
     secret = (
         request.headers.get("X-Webhook-Secret") or
         request.headers.get("Authorization", "").replace("Bearer ", "") or
@@ -76,43 +64,75 @@ def validate_webhook_secret(request: Request) -> bool:
     return secret == WEBHOOK_SECRET
 
 
+async def parse_body(request: Request) -> Dict[str, Any]:
+    """Parse request body (JSON or form data)"""
+    try:
+        return await request.json()
+    except:
+        form = await request.form()
+        if form:
+            return dict(form)
+        raw = await request.body()
+        return {"raw": raw.decode()} if raw else {}
+
+
 # ============================================================================
 # Routes
 # ============================================================================
 
+@app.on_event("startup")
+async def startup():
+    """Load source plugins on startup"""
+    registry.load_all()
+    registry.register_routes(app)
+
+
 @app.get("/")
 async def root():
-    """Service info"""
+    """Service info with all discovered sources"""
     return {
         "service": "event-trigger",
         "status": "running",
-        "enabled_sources": ENABLED_SOURCES,
-        "available_sources": list(INSTRUCTIONS.keys())
+        "sources": registry.list_sources(),
+        "endpoints": {
+            "webhook": "/webhook/{source}",
+            "trigger": "/trigger",
+            "trigger_sync": "/trigger/sync",
+            "history": "/history",
+            "sources": "/sources"
+        }
     }
 
 
 @app.get("/health")
 async def health():
     """Health check"""
-    return {"status": "healthy"}
-
-
-@app.get("/instructions")
-async def list_instructions():
-    """List all available instruction templates"""
     return {
-        source: instructions[:200] + "..." 
-        for source, instructions in INSTRUCTIONS.items()
+        "status": "healthy",
+        "sources_loaded": len(registry.sources)
     }
 
 
-@app.get("/instructions/{source}")
-async def get_source_instructions(source: str):
-    """Get instructions for a specific source"""
-    instructions = get_instructions(source)
+@app.get("/sources")
+async def list_sources():
+    """List all available source plugins"""
+    return {
+        "sources": registry.list_sources(),
+        "total": len(registry.sources)
+    }
+
+
+@app.get("/sources/{source}")
+async def get_source_info(source: str):
+    """Get details about a specific source"""
+    definition = registry.get_definition(source)
+    if not definition:
+        raise HTTPException(404, f"Source '{source}' not found")
+    
     return {
         "source": source,
-        "instructions": instructions
+        "definition": definition,
+        "instructions": registry.get_instructions(source)[:500] + "..."
     }
 
 
@@ -126,7 +146,7 @@ async def get_history(limit: int = 20):
 
 
 # ============================================================================
-# Webhook Endpoints
+# Universal Webhook Handler
 # ============================================================================
 
 @app.post("/webhook/{source}")
@@ -139,163 +159,52 @@ async def webhook_handler(
     instructions: Optional[str] = None
 ):
     """
-    Generic webhook handler for any source.
+    Universal webhook handler for any source.
     
-    The source determines which instructions template to use.
+    The source determines which plugin handles formatting and instructions.
+    Unknown sources fall back to the 'generic' plugin.
     """
-    # Validate
-    if not validate_source(source):
-        raise HTTPException(400, f"Source '{source}' not enabled")
-    
     if not validate_webhook_secret(request):
         raise HTTPException(401, "Invalid webhook secret")
     
-    # Parse body
-    try:
-        body = await request.json()
-    except:
-        body = dict(await request.form()) or {"raw": (await request.body()).decode()}
+    body = await parse_body(request)
+    
+    # Handle Slack challenge (special case)
+    if source == "slack" and body.get("type") == "url_verification":
+        return {"challenge": body.get("challenge")}
+    
+    # Use generic if source not found
+    actual_source = source if registry.get_source(source) else "generic"
     
     logger.info(f"📥 Received {source} webhook")
     
-    # Process
     if stream:
         return StreamingResponse(
-            event_processor.process_streaming(source, body, instructions, model),
+            event_processor.process_streaming(actual_source, body, instructions, model),
             media_type="text/event-stream"
         )
     else:
-        # Process in background for faster webhook response
         background_tasks.add_task(
             event_processor.process,
-            source, body, instructions, model
+            actual_source, body, instructions, model
         )
         
         return WebhookResponse(
             success=True,
-            message=f"Event queued for processing",
+            message=f"{source} event queued for processing",
             event_id=len(event_processor.history) + 1
         )
 
 
-@app.post("/webhook/email")
-async def email_webhook(request: Request, background_tasks: BackgroundTasks):
-    """
-    Email webhook endpoint.
-    
-    Expected payload:
-    {
-        "from": "sender@example.com",
-        "to": "recipient@example.com", 
-        "subject": "Email subject",
-        "body": "Email content",
-        "date": "2024-01-01T12:00:00Z",
-        "attachments": ["file1.pdf"]
-    }
-    """
-    body = await request.json()
-    logger.info(f"📧 Email from: {body.get('from', 'unknown')}")
-    
-    background_tasks.add_task(event_processor.process, "email", body)
-    
-    return WebhookResponse(success=True, message="Email queued for processing")
-
-
-@app.post("/webhook/stripe")
-async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
-    """
-    Stripe webhook endpoint.
-    
-    Receives standard Stripe webhook payloads.
-    Configure in Stripe Dashboard: https://dashboard.stripe.com/webhooks
-    """
-    body = await request.json()
-    event_type = body.get("type", "unknown")
-    logger.info(f"💳 Stripe event: {event_type}")
-    
-    background_tasks.add_task(event_processor.process, "stripe", body)
-    
-    return WebhookResponse(success=True, message=f"Stripe {event_type} queued")
-
-
-@app.post("/webhook/slack")
-async def slack_webhook(request: Request, background_tasks: BackgroundTasks):
-    """
-    Slack webhook endpoint.
-    
-    Handles Slack Events API payloads.
-    Configure in Slack App settings: https://api.slack.com/apps
-    """
-    body = await request.json()
-    
-    # Handle Slack URL verification challenge
-    if body.get("type") == "url_verification":
-        return {"challenge": body.get("challenge")}
-    
-    event = body.get("event", body)
-    logger.info(f"💬 Slack message from: {event.get('user', 'unknown')}")
-    
-    background_tasks.add_task(event_processor.process, "slack", event)
-    
-    return WebhookResponse(success=True, message="Slack event queued")
-
-
-@app.post("/webhook/zapier")
-async def zapier_webhook(request: Request, background_tasks: BackgroundTasks):
-    """
-    Zapier webhook endpoint.
-    
-    Receives webhooks from Zapier "Webhooks by Zapier" action.
-    Create a Zap with "Webhooks by Zapier" -> POST to this endpoint.
-    """
-    body = await request.json()
-    source_hint = body.get("_source", body.get("source", "zapier"))
-    logger.info(f"⚡ Zapier webhook: {source_hint}")
-    
-    # If Zapier provides a source hint, use that for instructions
-    actual_source = source_hint if source_hint in INSTRUCTIONS else "zapier"
-    
-    background_tasks.add_task(event_processor.process, actual_source, body)
-    
-    return WebhookResponse(success=True, message="Zapier event queued")
-
-
-@app.post("/webhook/calendar")
-async def calendar_webhook(request: Request, background_tasks: BackgroundTasks):
-    """Calendar event webhook"""
-    body = await request.json()
-    logger.info(f"📅 Calendar event: {body.get('summary', 'unknown')}")
-    
-    background_tasks.add_task(event_processor.process, "calendar", body)
-    
-    return WebhookResponse(success=True, message="Calendar event queued")
-
-
-@app.post("/webhook/form")
-async def form_webhook(request: Request, background_tasks: BackgroundTasks):
-    """Form submission webhook"""
-    try:
-        body = await request.json()
-    except:
-        body = dict(await request.form())
-    
-    logger.info(f"📝 Form submission received")
-    
-    background_tasks.add_task(event_processor.process, "form", body)
-    
-    return WebhookResponse(success=True, message="Form submission queued")
-
-
 # ============================================================================
-# Manual Trigger
+# Manual Triggers
 # ============================================================================
 
 @app.post("/trigger")
-async def manual_trigger(req: TriggerRequest):
+async def manual_trigger(req: TriggerRequest, background_tasks: BackgroundTasks):
     """
     Manual trigger endpoint for testing or custom integrations.
-    
-    Allows specifying custom instructions and streaming.
+    Processes in background by default.
     """
     logger.info(f"🔧 Manual trigger: {req.source}")
     
@@ -307,10 +216,15 @@ async def manual_trigger(req: TriggerRequest):
             media_type="text/event-stream"
         )
     else:
-        result = await event_processor.process(
+        background_tasks.add_task(
+            event_processor.process,
             req.source, req.data, req.instructions, req.model
         )
-        return result
+        return WebhookResponse(
+            success=True,
+            message=f"{req.source} trigger queued",
+            event_id=len(event_processor.history) + 1
+        )
 
 
 @app.post("/trigger/sync")

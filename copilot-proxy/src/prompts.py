@@ -14,10 +14,20 @@ HOW TO MODIFY AN ARTIFACT:
 3. replace_in_artifact(old_string="exact", new_string="new", description="change")"""
 
 
-def build_system_prompt(tool_names: list) -> dict:
+def build_system_prompt(tool_names: list, user_context: dict = None) -> dict:
     """Build system prompt that forces tool-only behavior"""
     
     rules = ARTIFACT_RULES if "create_artifact" in tool_names else ""
+    
+    # Build user context section if provided
+    context_section = ""
+    if user_context:
+        ctx_lines = "\n".join(f"- {k}: {v}" for k, v in user_context.items())
+        context_section = f"""
+
+## USER CONTEXT (auto-injected, use these values for tools that need them)
+{ctx_lines}
+IMPORTANT: When a tool needs telegram_chat_id or similar, use the values above. Do NOT ask the user for these."""
     
     return {
         "role": "system",
@@ -28,7 +38,7 @@ RULES:
 2. think() for reasoning (shown separately to user)
 3. NEVER repeat think() content in send_message()
 4. Work step by step - one tool at a time
-5. Call task_complete() when done{rules}
+5. Call task_complete() when done{rules}{context_section}
 
 Example: "Explain 2+2=4"
 1. think("Let me reason...")

@@ -147,7 +147,10 @@ async def _handle_multi_message(update: Update, context: ContextTypes.DEFAULT_TY
     chat_id = update.effective_chat.id
     final_message = ""
     
-    async for event in copilot_client.chat_stream(messages, model):
+    # Pass telegram context for tools that need it
+    user_context = {"telegram_chat_id": str(chat_id), "telegram_user_id": str(user_id)}
+    
+    async for event in copilot_client.chat_stream(messages, model, user_context):
         t = event.get("type")
         
         # Keep typing indicator
@@ -157,12 +160,12 @@ async def _handle_multi_message(update: Update, context: ContextTypes.DEFAULT_TY
             content = event["content"]
             if len(content) > 500:
                 content = content[:500] + "..."
-            await context.bot.send_message(chat_id=chat_id, text=f"💭 _{content}_", parse_mode=ParseMode.MARKDOWN)
+            await _send_safe_message(context.bot, chat_id, f"💭 {content}")
         
         elif t == "tool_call":
             tc = event.get("tool_call", {})
             name = tc.get("name", "?")
-            await context.bot.send_message(chat_id=chat_id, text=f"🔧 Outil: `{name}`", parse_mode=ParseMode.MARKDOWN)
+            await _send_safe_message(context.bot, chat_id, f"🔧 Outil: {name}")
         
         elif t == "message":
             final_message = event["content"]
@@ -174,13 +177,13 @@ async def _handle_multi_message(update: Update, context: ContextTypes.DEFAULT_TY
             art_type = event.get("artifact_type", "")
             
             if "html" in art_type.lower():
-                await context.bot.send_message(chat_id=chat_id, text=f"📄 **{title}** (HTML créé)", parse_mode=ParseMode.MARKDOWN)
+                await _send_safe_message(context.bot, chat_id, f"📄 {title} (HTML créé)")
             else:
                 snippet = content[:300] + "..." if len(content) > 300 else content
-                await context.bot.send_message(chat_id=chat_id, text=f"📄 **{title}**\n```\n{snippet}\n```", parse_mode=ParseMode.MARKDOWN)
+                await _send_safe_message(context.bot, chat_id, f"📄 {title}\n{snippet}")
         
         elif t == "error":
-            await context.bot.send_message(chat_id=chat_id, text=f"❌ {event['content']}")
+            await _send_safe_message(context.bot, chat_id, f"❌ {event['content']}")
     
     # Add final message to history
     if final_message:
@@ -190,8 +193,12 @@ async def _handle_multi_message(update: Update, context: ContextTypes.DEFAULT_TY
 async def _handle_single_message(update: Update, context: ContextTypes.DEFAULT_TYPE, messages: list, model: str):
     """Handle message in single-message mode - collect and send one response"""
     user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
     
-    result = await copilot_client.chat(messages, model)
+    # Pass telegram context for tools that need it
+    user_context = {"telegram_chat_id": str(chat_id), "telegram_user_id": str(user_id)}
+    
+    result = await copilot_client.chat(messages, model, user_context)
     
     # Build response
     response_parts = []
@@ -229,10 +236,30 @@ async def _handle_single_message(update: Update, context: ContextTypes.DEFAULT_T
     await _send_long_message(context.bot, update.effective_chat.id, response, parse_mode=ParseMode.MARKDOWN)
 
 
+async def _send_safe_message(bot, chat_id: int, text: str):
+    """Send a message without markdown to avoid parse errors"""
+    try:
+        await bot.send_message(chat_id=chat_id, text=text)
+    except Exception as e:
+        logger.error(f"Failed to send message: {e}")
+
+
 async def _send_long_message(bot, chat_id: int, text: str, parse_mode=None):
-    """Send message, splitting if too long"""
-    if len(text) > 4000:
-        for i in range(0, len(text), 4000):
-            await bot.send_message(chat_id=chat_id, text=text[i:i+4000], parse_mode=parse_mode)
-    else:
-        await bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
+    """Send message, splitting if too long. Falls back to plain text if markdown fails."""
+    try:
+        if len(text) > 4000:
+            for i in range(0, len(text), 4000):
+                try:
+                    await bot.send_message(chat_id=chat_id, text=text[i:i+4000], parse_mode=parse_mode)
+                except Exception:
+                    # Fallback to plain text if markdown fails
+                    await bot.send_message(chat_id=chat_id, text=text[i:i+4000])
+        else:
+            await bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
+    except Exception as e:
+        # Fallback to plain text if markdown fails
+        logger.warning(f"Markdown parse error, falling back to plain text: {e}")
+        try:
+            await bot.send_message(chat_id=chat_id, text=text)
+        except Exception as e2:
+            logger.error(f"Failed to send message: {e2}")

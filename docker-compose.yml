@@ -23,14 +23,18 @@ services:
       - "8081:8081"
     depends_on:
       - zapier-bridge
+      - memory-service
     environment:
       - ZAPIER_BRIDGE_URL=http://zapier-bridge:8082
+      - MEMORY_SERVICE_URL=http://memory-service:8084
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_DEFAULT_CHAT_ID=${TELEGRAM_DEFAULT_CHAT_ID:-}
       - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
       - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
       - http_proxy=http://proxy-web.cnamts.fr:3128/
       - https_proxy=http://proxy-web.cnamts.fr:3128/
-      - NO_PROXY=localhost,127.0.0.1,zapier-bridge
-      - no_proxy=localhost,127.0.0.1,zapier-bridge
+      - NO_PROXY=localhost,127.0.0.1,zapier-bridge,memory-service
+      - no_proxy=localhost,127.0.0.1,zapier-bridge,memory-service
 
   copilot-proxy:
     build: ./copilot-proxy
@@ -58,8 +62,10 @@ services:
       - "8083:8083"
     depends_on:
       - copilot-proxy
+      - memory-service
     environment:
       - COPILOT_PROXY_URL=http://copilot-proxy:8080
+      - MEMORY_SERVICE_URL=http://memory-service:8084
       - DEFAULT_MODEL=gpt-4.1
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
       - ENABLED_SOURCES=email,stripe,slack,calendar,zapier,form,custom
@@ -67,8 +73,8 @@ services:
       - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
       - http_proxy=http://proxy-web.cnamts.fr:3128/
       - https_proxy=http://proxy-web.cnamts.fr:3128/
-      - NO_PROXY=localhost,127.0.0.1,copilot-proxy
-      - no_proxy=localhost,127.0.0.1,copilot-proxy
+      - NO_PROXY=localhost,127.0.0.1,copilot-proxy,memory-service
+      - no_proxy=localhost,127.0.0.1,copilot-proxy,memory-service
 
   chat-ui:
     build: ./chat-ui
@@ -94,7 +100,7 @@ services:
     depends_on:
       - copilot-proxy
     environment:
-      - TELEGRAM_BOT_TOKEN=8482878750:AAGTDLoWZlJo379bHljvnf6ZamEE8Ned4kQ
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - COPILOT_PROXY_URL=http://copilot-proxy:8080
       - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
       - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
@@ -102,6 +108,22 @@ services:
       - https_proxy=http://proxy-web.cnamts.fr:3128/
       - NO_PROXY=copilot-proxy,localhost,127.0.0.1
       - no_proxy=copilot-proxy,localhost,127.0.0.1
+
+  memory-service:
+    build: ./memory-service
+    container_name: memory-service
+    restart: always
+    ports:
+      - "8084:8084"
+    volumes:
+      - memory_data:/app/data
+    environment:
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1
+      - no_proxy=localhost,127.0.0.1
 
   n8n:
     image: n8nio/n8n
@@ -129,6 +151,7 @@ services:
 
 volumes:
   n8n_data:
+  memory_data:
 
 networks:
   default:

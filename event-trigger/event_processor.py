@@ -1,5 +1,8 @@
 """
 Event Processor - Sends events to AI for processing
+
+Uses the plugin system from sources/ for formatting and instructions.
+Integrates with memory-service to find user's telegram_chat_id.
 """
 import json
 import logging
@@ -7,8 +10,8 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import httpx
 
-from config import COPILOT_PROXY_URL, DEFAULT_MODEL
-from instructions import get_instructions
+from config import COPILOT_PROXY_URL, MEMORY_SERVICE_URL, DEFAULT_MODEL
+from sources import registry
 
 logger = logging.getLogger(__name__)
 
@@ -18,111 +21,64 @@ class EventProcessor:
     
     def __init__(self):
         self.copilot_url = COPILOT_PROXY_URL
-        self.history: List[Dict] = []  # Keep last N processed events
+        self.memory_url = MEMORY_SERVICE_URL
+        self.history: List[Dict] = []
         self.max_history = 100
-    
-    def _format_event_content(self, source: str, event_data: Dict[str, Any]) -> str:
-        """Format event data into a readable message for the AI"""
         
+        # Load source plugins
+        registry.load_all()
+    
+    async def lookup_user_by_account(self, account_type: str, account_identifier: str) -> Optional[Dict]:
+        """
+        Look up a user by their linked account (e.g., email).
+        Returns user info including telegram_chat_id if found.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                response = await client.post(
+                    f"{self.memory_url}/users/lookup-by-account",
+                    json={
+                        "account_type": account_type,
+                        "account_identifier": account_identifier
+                    }
+                )
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    logger.warning(f"Lookup failed: {response.status_code} - {response.text}")
+        except Exception as e:
+            logger.warning(f"Could not lookup user: {e}")
+        return None
+    
+    def _extract_account_identifier(self, source: str, event_data: Dict) -> Optional[tuple]:
+        """
+        Extract account type and identifier from event data.
+        Used to look up the user in memory-service.
+        """
         if source == "email":
-            return self._format_email(event_data)
-        elif source == "stripe":
-            return self._format_stripe(event_data)
+            # Try to extract recipient email
+            to_email = event_data.get("to") or event_data.get("recipient") or event_data.get("to_email")
+            if to_email:
+                # Handle list format
+                if isinstance(to_email, list):
+                    to_email = to_email[0] if to_email else None
+                # Handle dict format with email field
+                if isinstance(to_email, dict):
+                    to_email = to_email.get("email") or to_email.get("address")
+                if to_email:
+                    return ("email", to_email.lower().strip())
+        
         elif source == "slack":
-            return self._format_slack(event_data)
+            user_id = event_data.get("user") or event_data.get("user_id")
+            if user_id:
+                return ("slack", user_id)
+        
         elif source == "calendar":
-            return self._format_calendar(event_data)
-        else:
-            return self._format_generic(source, event_data)
-    
-    def _format_email(self, data: Dict) -> str:
-        """Format email event"""
-        return f"""## 📧 Nouvel Email Reçu
-
-**De:** {data.get('from', 'Inconnu')}
-**À:** {data.get('to', 'Moi')}
-**Sujet:** {data.get('subject', 'Sans sujet')}
-**Date:** {data.get('date', datetime.now().isoformat())}
-
-### Contenu:
-{data.get('body', data.get('text', data.get('content', 'Pas de contenu')))}
-
-### Pièces jointes:
-{', '.join(data.get('attachments', [])) or 'Aucune'}
-"""
-    
-    def _format_stripe(self, data: Dict) -> str:
-        """Format Stripe webhook event"""
-        event_type = data.get('type', 'unknown')
-        obj = data.get('data', {}).get('object', data)
+            organizer = event_data.get("organizer") or event_data.get("email")
+            if organizer:
+                return ("email", organizer.lower().strip())
         
-        amount = obj.get('amount', 0)
-        if isinstance(amount, int):
-            amount = amount / 100  # Stripe amounts are in cents
-        
-        return f"""## 💳 Événement Stripe
-
-**Type:** {event_type}
-**ID:** {data.get('id', 'N/A')}
-**Date:** {datetime.now().isoformat()}
-
-### Détails:
-- **Montant:** {amount} {obj.get('currency', 'EUR').upper()}
-- **Client:** {obj.get('customer', obj.get('customer_email', 'N/A'))}
-- **Email:** {obj.get('receipt_email', obj.get('customer_email', 'N/A'))}
-- **Description:** {obj.get('description', 'N/A')}
-- **Status:** {obj.get('status', 'N/A')}
-
-### Données brutes:
-```json
-{json.dumps(obj, indent=2, default=str)[:1000]}
-```
-"""
-    
-    def _format_slack(self, data: Dict) -> str:
-        """Format Slack message event"""
-        return f"""## 💬 Message Slack
-
-**De:** {data.get('user', data.get('user_name', 'Inconnu'))}
-**Channel:** {data.get('channel', data.get('channel_name', 'DM'))}
-**Date:** {data.get('ts', datetime.now().isoformat())}
-
-### Message:
-{data.get('text', data.get('message', 'Pas de contenu'))}
-
-### Contexte:
-- Thread: {data.get('thread_ts', 'Non')}
-- Mention: {data.get('is_mention', False)}
-"""
-    
-    def _format_calendar(self, data: Dict) -> str:
-        """Format calendar event"""
-        return f"""## 📅 Événement Calendrier
-
-**Type:** {data.get('event_type', 'notification')}
-**Titre:** {data.get('summary', data.get('title', 'Sans titre'))}
-**Date:** {data.get('start', 'Non spécifié')} - {data.get('end', '')}
-**Lieu:** {data.get('location', 'Non spécifié')}
-
-### Description:
-{data.get('description', 'Pas de description')}
-
-### Participants:
-{', '.join(data.get('attendees', [])) or 'Aucun'}
-"""
-    
-    def _format_generic(self, source: str, data: Dict) -> str:
-        """Format generic event"""
-        return f"""## 🔔 Événement {source.upper()}
-
-**Source:** {source}
-**Date:** {datetime.now().isoformat()}
-
-### Données:
-```json
-{json.dumps(data, indent=2, default=str)}
-```
-"""
+        return None
     
     async def process(
         self,
@@ -137,17 +93,33 @@ class EventProcessor:
         Args:
             source: Event source (email, stripe, slack, etc.)
             event_data: The event payload
-            custom_instructions: Optional custom instructions
+            custom_instructions: Optional custom instructions override
             model: AI model to use
         
         Returns:
             AI response with actions taken
         """
-        # Get instructions for this source
-        instructions = get_instructions(source, custom_instructions)
+        # Try to look up user by account
+        user_info = None
+        telegram_chat_id = None
+        account_info = self._extract_account_identifier(source, event_data)
         
-        # Format event content
-        event_content = self._format_event_content(source, event_data)
+        if account_info:
+            account_type, account_identifier = account_info
+            user_info = await self.lookup_user_by_account(account_type, account_identifier)
+            if user_info:
+                telegram_chat_id = user_info.get("telegram_chat_id")
+                logger.info(f"📍 Found user with chat_id: {telegram_chat_id}")
+        
+        # Get instructions from plugin or custom
+        instructions = registry.get_instructions(source, custom_instructions)
+        
+        # Add telegram_chat_id context if available
+        if telegram_chat_id:
+            instructions += f"\n\n⚠️ IMPORTANT: L'utilisateur a un compte Telegram lié. Son chat_id est: {telegram_chat_id}\nUtilise l'outil send_telegram avec ce chat_id pour lui envoyer des notifications."
+        
+        # Format event using plugin
+        event_content = registry.format_event(source, event_data)
         
         # Build messages
         messages = [
@@ -221,8 +193,8 @@ class EventProcessor:
         Process an event with streaming response.
         Yields SSE events.
         """
-        instructions = get_instructions(source, custom_instructions)
-        event_content = self._format_event_content(source, event_data)
+        instructions = registry.get_instructions(source, custom_instructions)
+        event_content = registry.format_event(source, event_data)
         
         messages = [
             {"role": "system", "content": instructions},

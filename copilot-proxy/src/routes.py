@@ -54,12 +54,13 @@ async def chat_completions(request: Request):
     model = body.get("model", "gpt-4.1")
     use_tools = body.get("use_tools", True)
     stream = body.get("stream", False)
+    user_context = body.get("user_context", {})
     
-    logger.info(f"📩 Chat: {model} | tools={use_tools} | stream={stream}")
+    logger.info(f"📩 Chat: {model} | tools={use_tools} | stream={stream} | ctx={bool(user_context)}")
     
     mcp_tools, handlers = (await get_mcp_tools(), await get_tool_handlers()) if use_tools else ([], {})
     
-    gen = run_agentic_loop(messages, token, mcp_tools, handlers, use_tools, model)
+    gen = run_agentic_loop(messages, token, mcp_tools, handlers, use_tools, model, user_context)
     
     if stream:
         return StreamingResponse(stream_agentic_events(gen), media_type="text/event-stream", 

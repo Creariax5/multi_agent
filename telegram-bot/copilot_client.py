@@ -4,7 +4,7 @@ import httpx
 from config import COPILOT_PROXY_URL, DEFAULT_MODEL
 
 
-async def chat(messages: list, model: str = None) -> dict:
+async def chat(messages: list, model: str = None, user_context: dict = None) -> dict:
     """
     Send chat request to copilot-proxy and parse SSE response.
     
@@ -16,7 +16,7 @@ async def chat(messages: list, model: str = None) -> dict:
     """
     result = {"messages": [], "thinking": [], "artifacts": [], "tool_calls": []}
     
-    async for event in chat_stream(messages, model):
+    async for event in chat_stream(messages, model, user_context):
         t = event.get("type")
         if t == "message":
             result["messages"].append(event["content"])
@@ -30,7 +30,7 @@ async def chat(messages: list, model: str = None) -> dict:
     return result
 
 
-async def chat_stream(messages: list, model: str = None):
+async def chat_stream(messages: list, model: str = None, user_context: dict = None):
     """
     Stream chat events from copilot-proxy.
     
@@ -42,6 +42,10 @@ async def chat_stream(messages: list, model: str = None):
         "stream": True,
         "use_tools": True
     }
+    
+    # Add user context for tools that need it (e.g., telegram_chat_id)
+    if user_context:
+        body["user_context"] = user_context
     
     async with httpx.AsyncClient(timeout=120.0) as client:
         async with client.stream("POST", f"{COPILOT_PROXY_URL}/v1/chat/completions", json=body) as resp:

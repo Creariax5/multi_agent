@@ -10,10 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 async def run_agentic_loop(messages: list, copilot_token: str, mcp_tools: list, 
-                           tool_handlers: dict, use_tools: bool = True, model: str = "gpt-4.1"):
+                           tool_handlers: dict, use_tools: bool = True, model: str = "gpt-4.1",
+                           user_context: dict = None):
     """Run the agentic loop - yields events as they occur."""
     
-    current_messages = _prepare_messages(messages, mcp_tools, use_tools)
+    current_messages = _prepare_messages(messages, mcp_tools, use_tools, user_context)
     yield {"type": "model_info", "model": model}
     
     for iteration in range(1, MAX_AGENTIC_ITERATIONS + 1):
@@ -67,7 +68,7 @@ async def run_agentic_loop(messages: list, copilot_token: str, mcp_tools: list,
     logger.info(f"✨ Agentic loop complete")
 
 
-def _prepare_messages(messages: list, mcp_tools: list, use_tools: bool) -> list:
+def _prepare_messages(messages: list, mcp_tools: list, use_tools: bool, user_context: dict = None) -> list:
     """Prepare messages with system prompt"""
     msgs = messages.copy()
     
@@ -75,7 +76,14 @@ def _prepare_messages(messages: list, mcp_tools: list, use_tools: bool) -> list:
         tool_names = [t["function"]["name"] for t in mcp_tools]
         
         if not any(m.get("role") == "system" for m in msgs):
-            msgs = [build_system_prompt(tool_names)] + msgs
+            msgs = [build_system_prompt(tool_names, user_context)] + msgs
+        elif user_context:
+            # Inject user_context into existing system prompt
+            for m in msgs:
+                if m.get("role") == "system":
+                    ctx_str = "\n".join(f"- {k}: {v}" for k, v in user_context.items())
+                    m["content"] += f"\n\n## User Context (auto-injected, use these values for tools)\n{ctx_str}"
+                    break
         
         if len(msgs) > AUTO_SUMMARIZE_THRESHOLD:
             logger.warning(f"⚠️ Auto-summarize: {len(msgs)} messages")
