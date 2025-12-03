@@ -209,3 +209,11 @@ async def get_user_conversations(telegram_chat_id: str, limit: int = 50):
     user = await models.get_or_create_user(telegram_chat_id)
     conversations = await models.get_user_conversations(user["id"], limit)
     return {"conversations": conversations}
+
+
+@router.get("/conversations/user/{telegram_chat_id}/recent-messages")
+async def get_recent_messages(telegram_chat_id: str, limit: int = 20):
+    """Get recent messages for a user (for context injection)."""
+    user = await models.get_or_create_user(telegram_chat_id)
+    messages = await models.get_recent_messages_by_user(user["id"], limit)
+    return {"messages": messages}

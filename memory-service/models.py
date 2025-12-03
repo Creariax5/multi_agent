@@ -316,3 +316,21 @@ async def get_user_conversations(user_id: int, limit: int = 50) -> list:
         
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
+
+
+async def get_recent_messages_by_user(user_id: int, limit: int = 20) -> list:
+    """Get recent messages for a user across all conversations (for context)."""
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        
+        cursor = await db.execute("""
+            SELECT role, content, created_at
+            FROM conversations
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+        """, (user_id, limit))
+        
+        rows = await cursor.fetchall()
+        # Reverse to get chronological order
+        return [dict(row) for row in reversed(rows)]

@@ -17,8 +17,10 @@ class ZapierBridge:
     
     def __init__(self):
         self.url = ZAPIER_BRIDGE_URL
+        # No caching - always fetch fresh to avoid stale state after restarts
         self._tools_cache: Optional[List[Dict]] = None
-        self._enabled: Optional[bool] = None
+        self._cache_time: float = 0
+        self._cache_ttl: float = 60  # Cache for 60 seconds only
     
     async def _request(self, method: str, path: str, json_data: dict = None) -> Optional[Dict]:
         """Make request to Zapier Bridge"""
@@ -40,28 +42,29 @@ class ZapierBridge:
             return None
     
     async def is_enabled(self) -> bool:
-        """Check if Zapier Bridge is enabled and connected"""
-        if self._enabled is not None:
-            return self._enabled
-        
+        """Check if Zapier Bridge is enabled and connected (no cache - always fresh check)"""
         result = await self._request("GET", "/")
         if result:
-            self._enabled = result.get("zapier_enabled", False) and result.get("zapier_connected", False)
-        else:
-            self._enabled = False
-        return self._enabled
+            return result.get("zapier_enabled", False) and result.get("zapier_connected", False)
+        return False
     
     async def get_tools(self) -> List[Dict]:
-        """Get Zapier tools in OpenAI format"""
-        if self._tools_cache is not None:
+        """Get Zapier tools in OpenAI format with TTL cache"""
+        import time
+        
+        # Use cache only if fresh (within TTL)
+        if self._tools_cache is not None and (time.time() - self._cache_time) < self._cache_ttl:
             return self._tools_cache
         
         if not await self.is_enabled():
+            self._tools_cache = []
+            self._cache_time = time.time()
             return []
         
         result = await self._request("GET", "/tools")
         if result:
             self._tools_cache = result.get("tools", [])
+            self._cache_time = time.time()
             if self._tools_cache:
                 logger.info(f"⚡ Loaded {len(self._tools_cache)} Zapier tools")
             return self._tools_cache
@@ -84,7 +87,7 @@ class ZapierBridge:
     def clear_cache(self):
         """Clear tools cache"""
         self._tools_cache = None
-        self._enabled = None
+        self._cache_time = 0
 
 
 # Singleton

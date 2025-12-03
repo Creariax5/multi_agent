@@ -26,21 +26,19 @@ async def _mcp_request(method: str, path: str, json_data: dict = None, timeout: 
 
 
 async def get_mcp_tools() -> list:
-    """Fetch available tools from MCP server"""
-    if _cache["tools"] is None:
-        data = await _mcp_request("GET", "/tools")
-        if data:
-            _cache["tools"] = data.get("tools", [])
-            logger.info(f"🛠️ Loaded {len(_cache['tools'])} tools from MCP server")
-    return _cache["tools"] or []
+    """Fetch available tools from MCP server (no cache - always fresh)"""
+    data = await _mcp_request("GET", "/tools")
+    if data:
+        tools = data.get("tools", [])
+        logger.info(f"🛠️ Loaded {len(tools)} tools from MCP server")
+        return tools
+    return []
 
 
 async def get_tool_handlers() -> dict:
-    """Fetch tool handler info from MCP server"""
-    if _cache["handlers"] is None:
-        data = await _mcp_request("GET", "/tools/handlers")
-        _cache["handlers"] = data.get("handlers", {}) if data else {}
-    return _cache["handlers"]
+    """Fetch tool handler info from MCP server (no cache - always fresh)"""
+    data = await _mcp_request("GET", "/tools/handlers")
+    return data.get("handlers", {}) if data else {}
 
 
 async def tool_to_event(name: str, args: dict, result: dict) -> Optional[dict]:

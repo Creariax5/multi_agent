@@ -169,6 +169,9 @@ async def webhook_handler(
     
     body = await parse_body(request)
     
+    # Log raw body for debugging
+    logger.info(f"📥 Received {source} webhook - Raw data: {body}")
+    
     # Handle Slack challenge (special case)
     if source == "slack" and body.get("type") == "url_verification":
         return {"challenge": body.get("challenge")}

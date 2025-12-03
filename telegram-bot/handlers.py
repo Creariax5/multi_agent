@@ -6,6 +6,7 @@ from telegram.constants import ParseMode, ChatAction
 
 import copilot_client
 import conversations
+import memory_client
 
 logger = logging.getLogger(__name__)
 
@@ -121,15 +122,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Show typing indicator
     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
     
-    # Add user message to history
+    # Get local conversation history BEFORE adding new message
+    local_messages = conversations.get_messages(user_id)
+    
+    # If local history is empty, load from memory-service (includes event-trigger messages)
+    if len(local_messages) == 0:
+        logger.info(f"Loading history from memory-service for chat {chat_id}")
+        history = await memory_client.get_recent_messages(str(chat_id), limit=20)
+        if history:
+            logger.info(f"Loaded {len(history)} messages from memory-service")
+            for msg in history:
+                conversations.add_message(user_id, msg["role"], msg["content"])
+    
+    # Now add user message to local history
     conversations.add_message(user_id, "user", user_message)
     
-    # Get conversation settings
+    # Save to memory service (persistent)
+    await memory_client.save_message(str(chat_id), "user", user_message)
+    
+    # Get updated messages
     messages = conversations.get_messages(user_id)
     model = conversations.get_model(user_id)
     multi_msg = conversations.get_multi_msg(user_id)
     
-    logger.info(f"User {user_id}: {user_message[:50]}... (model: {model}, multi: {multi_msg})")
+    logger.info(f"User {user_id}: {user_message[:50]}... (model: {model}, multi: {multi_msg}, history: {len(messages)})")
     
     try:
         if multi_msg:
@@ -185,9 +201,10 @@ async def _handle_multi_message(update: Update, context: ContextTypes.DEFAULT_TY
         elif t == "error":
             await _send_safe_message(context.bot, chat_id, f"❌ {event['content']}")
     
-    # Add final message to history
+    # Add final message to history (local + persistent)
     if final_message:
         conversations.add_message(user_id, "assistant", final_message)
+        await memory_client.save_message(str(chat_id), "assistant", final_message)
 
 
 async def _handle_single_message(update: Update, context: ContextTypes.DEFAULT_TYPE, messages: list, model: str):
@@ -229,9 +246,11 @@ async def _handle_single_message(update: Update, context: ContextTypes.DEFAULT_T
     
     response = "\n".join(response_parts) or "🤔 Pas de réponse."
     
-    # Add assistant message to history
+    # Add assistant message to history (local + persistent)
     if result["messages"]:
-        conversations.add_message(user_id, "assistant", "\n".join(result["messages"]))
+        final_msg = "\n".join(result["messages"])
+        conversations.add_message(user_id, "assistant", final_msg)
+        await memory_client.save_message(str(chat_id), "assistant", final_msg)
     
     await _send_long_message(context.bot, update.effective_chat.id, response, parse_mode=ParseMode.MARKDOWN)
 

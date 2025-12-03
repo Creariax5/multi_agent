@@ -6,6 +6,7 @@ Integrates with memory-service to find user's telegram_chat_id.
 """
 import json
 import logging
+import re
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import httpx
@@ -50,13 +51,48 @@ class EventProcessor:
             logger.warning(f"Could not lookup user: {e}")
         return None
     
+    async def get_recent_messages(self, telegram_chat_id: str, limit: int = 10) -> List[Dict]:
+        """
+        Get recent messages for a user from memory-service.
+        Used to inject conversation history for context.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                response = await client.get(
+                    f"{self.memory_url}/conversations/user/{telegram_chat_id}/recent-messages",
+                    params={"limit": limit}
+                )
+                if response.status_code == 200:
+                    return response.json().get("messages", [])
+        except Exception as e:
+            logger.warning(f"Could not get recent messages: {e}")
+        return []
+    
+    async def save_message(self, telegram_chat_id: str, role: str, content: str) -> bool:
+        """Save a message to memory-service."""
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                response = await client.post(
+                    f"{self.memory_url}/conversations/message",
+                    json={
+                        "conversation_id": f"telegram_{telegram_chat_id}",
+                        "role": role,
+                        "content": content,
+                        "telegram_chat_id": telegram_chat_id
+                    }
+                )
+                return response.status_code == 200
+        except Exception as e:
+            logger.warning(f"Could not save message: {e}")
+        return False
+    
     def _extract_account_identifier(self, source: str, event_data: Dict) -> Optional[tuple]:
         """
         Extract account type and identifier from event data.
         Used to look up the user in memory-service.
         """
         if source == "email":
-            # Try to extract recipient email
+            # Try to extract recipient email - pass raw, let AI parse if needed
             to_email = event_data.get("to") or event_data.get("recipient") or event_data.get("to_email")
             if to_email:
                 # Handle list format
@@ -66,7 +102,11 @@ class EventProcessor:
                 if isinstance(to_email, dict):
                     to_email = to_email.get("email") or to_email.get("address")
                 if to_email:
-                    return ("email", to_email.lower().strip())
+                    # Extract email from "Name <email>" format if present
+                    import re
+                    match = re.search(r'<([^>]+)>', str(to_email))
+                    email = match.group(1) if match else str(to_email)
+                    return ("email", email.lower().strip())
         
         elif source == "slack":
             user_id = event_data.get("user") or event_data.get("user_id")
@@ -121,11 +161,19 @@ class EventProcessor:
         # Format event using plugin
         event_content = registry.format_event(source, event_data)
         
-        # Build messages
-        messages = [
-            {"role": "system", "content": instructions},
-            {"role": "user", "content": event_content}
-        ]
+        # Build messages - start with history if available
+        messages = [{"role": "system", "content": instructions}]
+        
+        # Load recent conversation history for context
+        if telegram_chat_id:
+            recent_messages = await self.get_recent_messages(telegram_chat_id, limit=10)
+            if recent_messages:
+                logger.info(f"📜 Loaded {len(recent_messages)} messages from history")
+                for msg in recent_messages:
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+        
+        # Add the current event as user message
+        messages.append({"role": "user", "content": event_content})
         
         # Record in history
         event_record = {
@@ -156,6 +204,12 @@ class EventProcessor:
                 
                 result = response.json()
                 ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                
+                # Save event and response to memory for context
+                if telegram_chat_id:
+                    await self.save_message(telegram_chat_id, "user", event_content)
+                    if ai_response:
+                        await self.save_message(telegram_chat_id, "assistant", ai_response)
                 
                 # Update history
                 event_record["status"] = "completed"
