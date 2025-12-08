@@ -1,68 +1,69 @@
 # 📚 Documentation Restructuration
 
-Cette documentation explore différentes architectures pour réorganiser le projet multi-agent.
+## 🏆 Document de Référence
 
-## Documents
+| Document | Description |
+|----------|-------------|
+| **[18-ARCHITECTURE-V3-FINALE.md](./18-ARCHITECTURE-V3-FINALE.md)** | 🏆 **Version Finale** - Architecture simplifiée |
 
-| Fichier | Description |
-|---------|-------------|
-| [01-VISION-ORIGINALE.md](./01-VISION-ORIGINALE.md) | Vision initiale clarifiée |
-| [02-ANALYSE-CRITIQUE.md](./02-ANALYSE-CRITIQUE.md) | Analyse des forces/faiblesses |
-| [03-PROPOSITION-ULTRA-SIMPLE.md](./03-PROPOSITION-ULTRA-SIMPLE.md) | Proposition A: 2 services |
-| [04-PROPOSITION-EVENT-SOURCING.md](./04-PROPOSITION-EVENT-SOURCING.md) | Proposition B: Event Sourcing |
-| [05-PROPOSITION-MONOLITHE-MODULAIRE.md](./05-PROPOSITION-MONOLITHE-MODULAIRE.md) | Proposition C: Monolithe (obsolète) |
-| [06-PROPOSITION-SERVERLESS.md](./06-PROPOSITION-SERVERLESS.md) | Proposition D: Serverless |
-| [07-RECOMMANDATION-FINALE.md](./07-RECOMMANDATION-FINALE.md) | ~~Ancienne reco~~ (obsolète) |
-| [08-PROPOSITION-SERVICES-MODULAIRES.md](./08-PROPOSITION-SERVICES-MODULAIRES.md) | Proposition E: Services modulaires |
-| [09-CONTRATS-SERVICES.md](./09-CONTRATS-SERVICES.md) | Contrats INPUT/OUTPUT |
-| [10-ARCHITECTURE-FINALE.md](./10-ARCHITECTURE-FINALE.md) | **🏆 ARCHITECTURE FINALE** |
+## Documents Complémentaires
 
-## TL;DR
+| Document | Description |
+|----------|-------------|
+| [14-ARCHITECTURE-PHILOSOPHY.md](./14-ARCHITECTURE-PHILOSOPHY.md) | Philosophie SPET, principes |
+| [15-AI-PERSPECTIVE.md](./15-AI-PERSPECTIVE.md) | Point de vue de l'IA, tools, workflow |
+| [16-SERVICE-SEPARATIONS.md](./16-SERVICE-SEPARATIONS.md) | Analyse des séparations de services |
+| [17-CLARIFICATIONS.md](./17-CLARIFICATIONS.md) | Clarifications event-log, prompt-builder, memory |
 
-**Architecture choisie: Tout passe par les logs. Les services observent et réagissent.**
+---
+
+## Historique des Propositions
+
+| Fichier | Status | Description |
+|---------|--------|-------------|
+| 01 à 09 | 📜 Historique | Propositions successives |
+| 10-12 | ⚠️ Obsolète | Remplacé par 13 |
+| 13-ARCHITECTURE-V2-FINALE | ⚠️ Obsolète | Remplacé par 18 (V3) |
+| **14 à 18** | ✅ **ACTIFS** | Documents de référence |
+
+---
+
+## 🏛️ TL;DR : Architecture V3
+
+### Insight Clé : Pas de Duplication
+
+- `event-log` = **source de vérité unique** (stocke TOUT)
+- `memory` = juste une **couche d'indexation** (embeddings)
 
 ```
-TRIGGERS ──► AI-BRAIN ──► EVENT-LOG ◄── OBSERVERS
-                              │
-                              └── (stream SSE)
+core/ (5 services)
+├── ai-brain/               # Orchestration boucle
+├── copilot-client/         # Connexion LLM  
+├── mcp-server/tools/       # Exécution tools (plugins)
+├── prompt-builder/         # Construction prompts
+└── event-log/              # Stockage UNIQUE + stream SSE
+
+services/ (1 service auxiliaire)
+└── memory/                 # Indexation + recherche (pas de duplication)
+
+interfaces/{name}/ (3 services chacun)
+├── trigger/                # Reçoit → TriggerEvent → ai-brain
+├── observer/               # SSE event-log → appelle sender
+└── sender/                 # Envoie sur le canal externe
 ```
 
-### Principe clé
+### Principes clés
 
-1. **Triggers** reçoivent des messages → envoient `TriggerEvent` à ai-brain
-2. **AI-Brain** traite et émet **tous** les events vers event-log
-3. **Observers** lisent le stream et réagissent :
-   - `memory-store` stocke les events `memory_write`
-   - `telegram-bot` envoie quand il voit `send_telegram`
-   - `chat-ui` affiche en temps réel
+1. **1 service = 1 responsabilité exacte**
+2. **Pas de duplication** - event-log contient tout
+3. **Extensible via plugins/fichiers**
+4. **Communication via event-log SSE**
+5. **Dockerfile générique** pour toutes les interfaces
 
-### Les 7 services
+### Containers : 5 (core) + 1 (memory) + 3 × N (interfaces)
 
-| Catégorie | Services | Rôle |
-|-----------|----------|------|
-| **Triggers** | `telegram-trigger`, `chat-ui-trigger` | Reçoivent → TriggerEvent |
-| **Core** | `ai-brain`, `event-log` | Traitement + logs centraux |
-| **Observers** | `memory-store`, `chat-ui`, `telegram-bot` | Observent et réagissent |
-
-### Un seul format : LogEvent
-
-```typescript
-{
-  type: "message" | "thinking" | "send_telegram" | "memory_write" | ...,
-  session_id: string,
-  user_id: string,
-  source: "telegram" | "chat_ui" | ...,
-  data: any
-}
-```
-
-## Quick Start
-
-```bash
-docker compose up
-```
-
-Pour ajouter un nouveau canal (ex: Discord):
-1. Créer `triggers/discord/` → envoie TriggerEvent à ai-brain
-2. Créer `observers/discord-bot/` → observe event-log et envoie
-3. C'est tout ! 🎉
+| Interfaces | Total containers |
+|------------|------------------|
+| 2 (telegram, chat-ui) | 5 + 1 + 6 = 12 |
+| 3 (+email) | 5 + 1 + 9 = 15 |
+| 4 (+discord) | 5 + 1 + 12 = 18 |
