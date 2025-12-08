@@ -35,6 +35,11 @@ async def stream_copilot(token: str, messages: list, body: dict):
                     chunk = json.loads(data)
                     delta = chunk.get("choices", [{}])[0].get("delta", {})
                     
+                    # Handle text content
+                    if "content" in delta and delta["content"]:
+                        yield ("content_chunk", delta["content"])
+
+                    # Handle tool calls
                     for tc in delta.get("tool_calls", []):
                         yield ("tool_chunk", {
                             "index": tc.get("index"),

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Craft AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="crafting-area" id="crafting-area">
+            <div class="controls">
+                <button id="clear-btn">Clear Canvas</button>
+                <button id="reset-btn">Reset Game</button>
+            </div>
+            <div class="message" id="message">Drag elements here to combine them</div>
+        </div>
+        <div class="sidebar">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search elements...">
+            </div>
+            <div class="elements-list" id="elements-list">
+                <!-- Elements will be populated here -->
+            </div>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

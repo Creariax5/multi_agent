@@ -93,6 +93,23 @@ services:
       - NO_PROXY=copilot-proxy,localhost,127.0.0.1
       - no_proxy=copilot-proxy,localhost,127.0.0.1
 
+  infinite-craft:
+    build: ./infinite-craft
+    container_name: infinite-craft
+    restart: always
+    ports:
+      - "3001:3001"
+    depends_on:
+      - copilot-proxy
+    environment:
+      - COPILOT_PROXY_URL=http://copilot-proxy:8080/v1
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1,copilot-proxy
+      - no_proxy=localhost,127.0.0.1,copilot-proxy
+
   telegram-bot:
     build: ./telegram-bot
     container_name: telegram-bot

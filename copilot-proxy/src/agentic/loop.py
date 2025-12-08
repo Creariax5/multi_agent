@@ -28,16 +28,30 @@ async def run_agentic_loop(messages: list, copilot_token: str, mcp_tools: list,
         
         # Stream and collect tool calls
         tool_buffer = {}
+        content_buffer = []
+        
         async for chunk_type, data in stream_copilot(copilot_token, current_messages, body):
             if chunk_type == "error":
                 logger.error(f"❌ Copilot error: {data}")
                 return
             if chunk_type == "done":
                 break
+            if chunk_type == "content_chunk":
+                content_buffer.append(data)
+                yield {"type": "message_delta", "content": data}
             if chunk_type == "tool_chunk":
                 event = _process_chunk(tool_buffer, data)
                 if event:
                     yield event
+        
+        # If we got content but no tools, we are done (unless we want to continue conversation?)
+        # For now, if we have content, we yield a full message event and break if no tools
+        if content_buffer:
+            full_content = "".join(content_buffer)
+            yield {"type": "message", "content": full_content, "role": "assistant"}
+            
+            # If we have content and NO tools, we should probably stop the loop
+            # unless the model output both content AND tool calls (which is possible)
         
         # Reconstruct tool calls
         tool_calls = _build_tool_calls(tool_buffer)
