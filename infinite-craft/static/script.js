@@ -40,21 +40,75 @@ function getWordCount(name) {
     return name.trim().split(/\s+/).length;
 }
 
-const wordFilter = document.getElementById("word-filter");
+function getRecipeCount(el) {
+    return (el.recipes && el.recipes.length) || (el.parents ? 1 : 0);
+}
+
+// New filter elements
+const wordOp = document.getElementById("word-op");
+const wordValue = document.getElementById("word-value");
+const depthOp = document.getElementById("depth-op");
+const depthValue = document.getElementById("depth-value");
+const recipeFilter = document.getElementById("recipe-filter");
+const statsCount = document.getElementById("stats-count");
+const statsBtn = document.getElementById("stats-btn");
+const statsModal = document.getElementById("stats-modal");
+const statsGrid = document.getElementById("stats-grid");
+const closeStats = document.querySelector(".close-stats");
+
+// Enable/disable number inputs based on operator selection
+if (wordOp) {
+    wordOp.addEventListener("change", () => {
+        wordValue.disabled = wordOp.value === "all";
+        if (wordOp.value === "all") wordValue.value = "";
+        renderSidebar();
+    });
+}
+if (depthOp) {
+    depthOp.addEventListener("change", () => {
+        depthValue.disabled = depthOp.value === "all";
+        if (depthOp.value === "all") depthValue.value = "";
+        renderSidebar();
+    });
+}
+
+function matchesFilter(value, op, target) {
+    if (op === "all" || target === "") return true;
+    const t = parseInt(target);
+    if (isNaN(t)) return true;
+    if (op === "=") return value === t;
+    if (op === "<=") return value <= t;
+    if (op === ">=") return value >= t;
+    return true;
+}
+
+function updateStatsCount() {
+    if (statsCount) {
+        statsCount.textContent = `${discoveredElements.length} elements`;
+    }
+}
 
 function renderSidebar() {
     elementsList.innerHTML = "";
     const filter = searchInput.value.toLowerCase();
     const sortMode = sortSelect.value;
-    const wordFilterValue = wordFilter ? wordFilter.value : "all";
+    const wOp = wordOp ? wordOp.value : "all";
+    const wVal = wordValue ? wordValue.value : "";
+    const dOp = depthOp ? depthOp.value : "all";
+    const dVal = depthValue ? depthValue.value : "";
+    const recipeFilterValue = recipeFilter ? recipeFilter.value : "all";
     
-    discoveredElements
+    const filtered = discoveredElements
         .filter(el => el.name.toLowerCase().includes(filter))
+        .filter(el => matchesFilter(getWordCount(el.name), wOp, wVal))
+        .filter(el => matchesFilter(el.depth || 0, dOp, dVal))
         .filter(el => {
-            if (wordFilterValue === "all") return true;
-            const wc = getWordCount(el.name);
-            if (wordFilterValue === "4+") return wc >= 4;
-            return wc === parseInt(wordFilterValue);
+            if (recipeFilterValue === "all") return true;
+            const rc = getRecipeCount(el);
+            if (recipeFilterValue === "multi") return rc > 1;
+            if (recipeFilterValue === "single") return rc === 1;
+            if (recipeFilterValue === "base") return rc === 0;
+            return true;
         })
         .sort((a, b) => {
             if (sortMode === "name") {
@@ -73,8 +127,9 @@ function renderSidebar() {
                 return getWordCount(b.name) - getWordCount(a.name) || a.name.localeCompare(b.name);
             }
             return 0;
-        })
-        .forEach(el => {
+        });
+    
+    filtered.forEach(el => {
             const div = document.createElement("div");
             div.className = "element";
             div.innerHTML = `<span class="emoji">${el.emoji}</span> <span class="name">${el.name}</span>`;
@@ -89,6 +144,8 @@ function renderSidebar() {
             
             elementsList.appendChild(div);
         });
+    
+    updateStatsCount();
 }
 
 // Modal functions moved to modal.js
@@ -277,7 +334,107 @@ document.addEventListener("mouseup", async (e) => {
 
 searchInput.addEventListener("input", renderSidebar);
 sortSelect.addEventListener("change", renderSidebar);
-if (wordFilter) wordFilter.addEventListener("change", renderSidebar);
+if (wordValue) wordValue.addEventListener("input", renderSidebar);
+if (depthValue) depthValue.addEventListener("input", renderSidebar);
+if (recipeFilter) recipeFilter.addEventListener("change", renderSidebar);
+
+// Stats Modal
+if (statsBtn) {
+    statsBtn.addEventListener("click", () => {
+        renderStats();
+        statsModal.style.display = "block";
+    });
+}
+
+if (closeStats) {
+    closeStats.addEventListener("click", () => {
+        statsModal.style.display = "none";
+    });
+}
+
+window.addEventListener("click", (event) => {
+    if (event.target === statsModal) statsModal.style.display = "none";
+});
+
+function renderStats() {
+    if (!statsGrid) return;
+    
+    const total = discoveredElements.length;
+    const baseCount = discoveredElements.filter(e => !e.parents).length;
+    const craftedCount = total - baseCount;
+    
+    // Word count stats
+    const oneWord = discoveredElements.filter(e => getWordCount(e.name) === 1).length;
+    const twoWords = discoveredElements.filter(e => getWordCount(e.name) === 2).length;
+    const threeWords = discoveredElements.filter(e => getWordCount(e.name) === 3).length;
+    const fourPlusWords = discoveredElements.filter(e => getWordCount(e.name) >= 4).length;
+    
+    // Depth stats
+    const maxDepth = Math.max(...discoveredElements.map(e => e.depth || 0));
+    const avgDepth = (discoveredElements.reduce((sum, e) => sum + (e.depth || 0), 0) / total).toFixed(1);
+    const deepestElements = discoveredElements.filter(e => e.depth === maxDepth);
+    
+    // Recipe stats
+    const multiRecipe = discoveredElements.filter(e => getRecipeCount(e) > 1).length;
+    const totalRecipes = discoveredElements.reduce((sum, e) => sum + getRecipeCount(e), 0);
+    
+    // Most recent
+    const sorted = [...discoveredElements].sort((a, b) => b.time - a.time);
+    const mostRecent = sorted.find(e => e.time > 0);
+    
+    statsGrid.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-value">${total}</div>
+            <div class="stat-label">Total Elements</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${craftedCount}</div>
+            <div class="stat-label">Crafted Elements</div>
+        </div>
+        <div class="stat-card highlight">
+            <div class="stat-value">${maxDepth}</div>
+            <div class="stat-label">Max Hierarchy Depth</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${avgDepth}</div>
+            <div class="stat-label">Avg Hierarchy Depth</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${oneWord}</div>
+            <div class="stat-label">1-Word Elements</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${twoWords}</div>
+            <div class="stat-label">2-Word Elements</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${threeWords}</div>
+            <div class="stat-label">3-Word Elements</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${fourPlusWords}</div>
+            <div class="stat-label">4+ Word Elements</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${totalRecipes}</div>
+            <div class="stat-label">Total Recipes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${multiRecipe}</div>
+            <div class="stat-label">Multi-Recipe Elements</div>
+        </div>
+        <div class="stat-card full-width highlight">
+            <div class="stat-value">${deepestElements[0]?.emoji || '?'} ${deepestElements[0]?.name || 'None'}</div>
+            <div class="stat-label">Deepest Element (Depth ${maxDepth})</div>
+        </div>
+        ${mostRecent ? `
+        <div class="stat-card full-width">
+            <div class="stat-value">${mostRecent.emoji} ${mostRecent.name}</div>
+            <div class="stat-label">Most Recent Discovery</div>
+        </div>
+        ` : ''}
+    `;
+}
 
 clearBtn.addEventListener("click", () => {
     [...instances].forEach(removeInstance);

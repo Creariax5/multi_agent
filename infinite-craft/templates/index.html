@@ -19,6 +19,10 @@
             <div class="message" id="message">Drag elements here to combine them</div>
         </div>
         <div class="sidebar">
+            <div class="stats-bar" id="stats-bar">
+                <span id="stats-count">0 elements</span>
+                <button id="stats-btn" title="View Statistics">📊</button>
+            </div>
             <div class="search-container">
                 <input type="text" id="search-input" placeholder="Search elements...">
                 <div class="sort-controls">
@@ -33,17 +37,47 @@
                     </select>
                 </div>
                 <div class="filter-controls">
-                    <select id="word-filter">
-                        <option value="all">All Word Counts</option>
-                        <option value="1">1 Word Only</option>
-                        <option value="2">2 Words Only</option>
-                        <option value="3">3 Words Only</option>
-                        <option value="4+">4+ Words</option>
+                    <div class="filter-row">
+                        <label>Words:</label>
+                        <select id="word-op">
+                            <option value="all">All</option>
+                            <option value="=">=</option>
+                            <option value="<=">≤</option>
+                            <option value=">=">≥</option>
+                        </select>
+                        <input type="number" id="word-value" min="1" max="20" placeholder="#" disabled>
+                    </div>
+                    <div class="filter-row">
+                        <label>Depth:</label>
+                        <select id="depth-op">
+                            <option value="all">All</option>
+                            <option value="=">=</option>
+                            <option value="<=">≤</option>
+                            <option value=">=">≥</option>
+                        </select>
+                        <input type="number" id="depth-value" min="0" max="100" placeholder="#" disabled>
+                    </div>
+                    <select id="recipe-filter">
+                        <option value="all">All Recipes</option>
+                        <option value="multi">Multiple Recipes</option>
+                        <option value="single">Single Recipe</option>
+                        <option value="base">No Recipe (Base)</option>
                     </select>
                 </div>
             </div>
             <div class="elements-list" id="elements-list">
                 <!-- Elements will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="stats-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal close-stats">&times;</span>
+            <h2>📊 Game Statistics</h2>
+            <div class="stats-grid" id="stats-grid">
+                <!-- Stats will be populated here -->
             </div>
         </div>
     </div>

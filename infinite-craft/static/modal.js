@@ -160,9 +160,11 @@ function toggleRow(row, element, depth, maxDepth, container) {
 
 // Event Listeners for Modal
 if (closeModal) {
-    closeModal.onclick = () => modal.style.display = "none";
+    closeModal.addEventListener("click", () => {
+        modal.style.display = "none";
+    });
 }
 
-window.onclick = (event) => {
-    if (event.target == modal) modal.style.display = "none";
-}
+window.addEventListener("click", (event) => {
+    if (event.target === modal) modal.style.display = "none";
+});
