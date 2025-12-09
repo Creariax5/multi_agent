@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 AI Trivia</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 AI Trivia</h1>
+        
+        <!-- Menu -->
+        <div id="menu" class="card">
+            <h2>Choisis une catégorie</h2>
+            
+            <div class="categories">
+                <button class="cat-btn" data-cat="culture générale">🌐 Culture Générale</button>
+                <button class="cat-btn" data-cat="géographie">🌍 Géographie</button>
+                <button class="cat-btn" data-cat="histoire">📚 Histoire</button>
+                <button class="cat-btn" data-cat="sciences">🔬 Sciences</button>
+                <button class="cat-btn" data-cat="cinéma et séries">🎬 Cinéma & Séries</button>
+                <button class="cat-btn" data-cat="jeux vidéo">🎮 Jeux Vidéo</button>
+                <button class="cat-btn" data-cat="musique">🎵 Musique</button>
+                <button class="cat-btn" data-cat="sport">⚽ Sport</button>
+                <button class="cat-btn" data-cat="gastronomie">🍕 Gastronomie</button>
+                <button class="cat-btn" data-cat="random">🎲 Random</button>
+            </div>
+            
+            <div class="custom-theme">
+                <p>Ou entre ton propre thème:</p>
+                <input type="text" id="custom-theme" placeholder="Ex: Harry Potter, Cuisine italienne...">
+                <button id="custom-btn" class="btn btn-secondary">🎯 Jouer ce thème</button>
+            </div>
+            
+            <div class="stats-bar">
+                <span>🏆 Meilleur: <strong id="best-score">0</strong></span>
+                <span>🔥 Meilleur streak: <strong id="best-streak">0</strong></span>
+            </div>
+        </div>
+        
+        <!-- Game -->
+        <div id="game" class="card" style="display: none;">
+            <div class="game-header">
+                <div class="category-badge" id="game-category">🌐 Culture Générale</div>
+                <div class="score-display">
+                    <span class="score">Score: <strong id="score">0</strong></span>
+                    <span class="streak" id="streak-display">🔥 0</span>
+                </div>
+            </div>
+            
+            <div id="question-box" class="question-box">
+                <p id="question-text">Question...</p>
+            </div>
+            
+            <div id="choices" class="choices">
+                <!-- Choices generated here -->
+            </div>
+            
+            <div id="feedback" class="feedback" style="display: none;">
+                <div id="feedback-icon" class="feedback-icon">✓</div>
+                <p id="feedback-text"></p>
+                <div id="explanation" class="explanation"></div>
+                <button class="btn btn-primary" onclick="nextQuestion()">Suivant →</button>
+            </div>
+            
+            <div class="game-actions">
+                <button class="btn btn-secondary" onclick="quitGame()">🚪 Quitter</button>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>L'IA génère une question...</p>
+        </div>
+        
+        <!-- Game Over -->
+        <div id="gameover" class="card" style="display: none;">
+            <div class="gameover-icon">🎉</div>
+            <h2>Partie terminée!</h2>
+            <div class="final-stats">
+                <div class="stat-item">
+                    <span class="stat-value" id="final-score">0</span>
+                    <span class="stat-label">Points</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="final-correct">0</span>
+                    <span class="stat-label">Bonnes réponses</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="final-streak">0</span>
+                    <span class="stat-label">Meilleur streak</span>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-large" onclick="backToMenu()">🔄 Rejouer</button>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>

@@ -166,6 +166,59 @@ services:
     depends_on:
       - event-trigger
 
+  # === AI Games ===
+  
+  ai-tamagotchi:
+    build: ./ai-tamagotchi
+    container_name: ai-tamagotchi
+    restart: always
+    ports:
+      - "3002:3002"
+    depends_on:
+      - copilot-proxy
+    environment:
+      - COPILOT_PROXY_URL=http://copilot-proxy:8080
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1,copilot-proxy
+      - no_proxy=localhost,127.0.0.1,copilot-proxy
+
+  ai-20-questions:
+    build: ./ai-20-questions
+    container_name: ai-20-questions
+    restart: always
+    ports:
+      - "3003:3003"
+    depends_on:
+      - copilot-proxy
+    environment:
+      - COPILOT_PROXY_URL=http://copilot-proxy:8080
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1,copilot-proxy
+      - no_proxy=localhost,127.0.0.1,copilot-proxy
+
+  ai-trivia:
+    build: ./ai-trivia
+    container_name: ai-trivia
+    restart: always
+    ports:
+      - "3004:3004"
+    depends_on:
+      - copilot-proxy
+    environment:
+      - COPILOT_PROXY_URL=http://copilot-proxy:8080
+      - HTTP_PROXY=http://proxy-web.cnamts.fr:3128/
+      - HTTPS_PROXY=http://proxy-web.cnamts.fr:3128/
+      - http_proxy=http://proxy-web.cnamts.fr:3128/
+      - https_proxy=http://proxy-web.cnamts.fr:3128/
+      - NO_PROXY=localhost,127.0.0.1,copilot-proxy
+      - no_proxy=localhost,127.0.0.1,copilot-proxy
+
 volumes:
   n8n_data:
   memory_data:

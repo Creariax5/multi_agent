@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐣 AI Tamagotchi</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🐣 AI Tamagotchi</h1>
+        
+        <!-- No Tamagotchi State -->
+        <div id="no-tama" class="card">
+            <p>Tu n'as pas encore de Tamagotchi !</p>
+            <button id="generate-btn" class="btn btn-primary">🎲 Générer un Tamagotchi</button>
+        </div>
+        
+        <!-- Tamagotchi Display -->
+        <div id="tama-display" class="card" style="display: none;">
+            <div class="tama-header">
+                <span id="tama-emoji" class="tama-emoji">🐣</span>
+                <div class="tama-info">
+                    <h2 id="tama-name">Nom</h2>
+                    <p id="tama-species" class="species">Espèce</p>
+                    <p id="tama-personality" class="personality"></p>
+                </div>
+                <div class="tama-level">
+                    <span>Nv. <span id="tama-level">1</span></span>
+                    <div class="xp-bar">
+                        <div id="xp-fill" class="xp-fill"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="tama-needs" class="needs-container">
+                <!-- Needs bars generated here -->
+            </div>
+            
+            <div id="tama-message" class="message-bubble" style="display: none;">
+                <p id="message-text"></p>
+            </div>
+            
+            <div class="actions">
+                <button class="btn" onclick="doAction('nourrir')">🍖 Nourrir</button>
+                <button class="btn" onclick="doAction('jouer')">🎾 Jouer</button>
+                <button class="btn" onclick="doAction('caresser')">🤗 Caresser</button>
+                <button class="btn" onclick="doAction('dormir')">😴 Dormir</button>
+            </div>
+            
+            <div class="talk-section">
+                <input type="text" id="talk-input" placeholder="Parle à ton Tamagotchi...">
+                <button class="btn btn-primary" onclick="talk()">💬 Parler</button>
+            </div>
+            
+            <div class="secondary-actions">
+                <button class="btn btn-small" onclick="randomEvent()">🎲 Événement</button>
+                <button class="btn btn-small btn-danger" onclick="releaseTama()">👋 Libérer</button>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>L'IA réfléchit...</p>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
