@@ -1,0 +1,2051 @@
+{
+  "version": 1,
+  "exportDate": "2025-12-09T09:57:59.441Z",
+  "elementCount": 120,
+  "elements": [
+    {
+      "name": "Water",
+      "emoji": "💧",
+      "time": 0,
+      "depth": 0,
+      "parents": null,
+      "recipes": []
+    },
+    {
+      "name": "Fire",
+      "emoji": "🔥",
+      "time": 0,
+      "depth": 0,
+      "parents": null,
+      "recipes": []
+    },
+    {
+      "name": "Earth",
+      "emoji": "🌍",
+      "time": 0,
+      "depth": 0,
+      "parents": null,
+      "recipes": []
+    },
+    {
+      "name": "Wind",
+      "emoji": "💨",
+      "time": 0,
+      "depth": 0,
+      "parents": null,
+      "recipes": []
+    },
+    {
+      "name": "Dust",
+      "emoji": "🌫️",
+      "time": 1765268830734,
+      "depth": 1,
+      "parents": [
+        "Wind",
+        "Earth"
+      ],
+      "recipes": [
+        [
+          "Wind",
+          "Earth"
+        ]
+      ]
+    },
+    {
+      "name": "Sand",
+      "emoji": "🏖️",
+      "time": 1765268849307,
+      "depth": 2,
+      "parents": [
+        "Dust",
+        "Dust"
+      ],
+      "recipes": [
+        [
+          "Dust",
+          "Dust"
+        ]
+      ]
+    },
+    {
+      "name": "Desert",
+      "emoji": "🏜️",
+      "time": 1765268889042,
+      "depth": 3,
+      "parents": [
+        "Sand",
+        "Sand"
+      ],
+      "recipes": [
+        [
+          "Sand",
+          "Sand"
+        ]
+      ]
+    },
+    {
+      "name": "Lava",
+      "emoji": "🌋",
+      "time": 1765268895120,
+      "depth": 1,
+      "parents": [
+        "Earth",
+        "Fire"
+      ],
+      "recipes": [
+        [
+          "Earth",
+          "Fire"
+        ]
+      ]
+    },
+    {
+      "name": "Mud",
+      "emoji": "🟫",
+      "time": 1765268895744,
+      "depth": 1,
+      "parents": [
+        "Earth",
+        "Water"
+      ],
+      "recipes": [
+        [
+          "Earth",
+          "Water"
+        ],
+        [
+          "Clay",
+          "Earth"
+        ],
+        [
+          "Clay",
+          "Water"
+        ]
+      ]
+    },
+    {
+      "name": "Ash",
+      "emoji": "🌫️",
+      "time": 1765268897468,
+      "depth": 2,
+      "parents": [
+        "Wind",
+        "Lava"
+      ],
+      "recipes": [
+        [
+          "Wind",
+          "Lava"
+        ]
+      ]
+    },
+    {
+      "name": "Volcanic Soil",
+      "emoji": "🌋",
+      "time": 1765268897510,
+      "depth": 2,
+      "parents": [
+        "Lava",
+        "Mud"
+      ],
+      "recipes": [
+        [
+          "Lava",
+          "Mud"
+        ]
+      ]
+    },
+    {
+      "name": "Clay",
+      "emoji": "🟫",
+      "time": 1765268897944,
+      "depth": 2,
+      "parents": [
+        "Lava",
+        "Mud"
+      ],
+      "recipes": [
+        [
+          "Lava",
+          "Mud"
+        ],
+        [
+          "Water",
+          "Pottery"
+        ],
+        [
+          "Water",
+          "Adobe"
+        ]
+      ]
+    },
+    {
+      "name": "Ceramics",
+      "emoji": "🏺",
+      "time": 1765268899889,
+      "depth": 3,
+      "parents": [
+        "Clay",
+        "Ash"
+      ],
+      "recipes": [
+        [
+          "Clay",
+          "Ash"
+        ]
+      ]
+    },
+    {
+      "name": "Pottery",
+      "emoji": "🏺",
+      "time": 1765268900415,
+      "depth": 3,
+      "parents": [
+        "Clay",
+        "Ash"
+      ],
+      "recipes": [
+        [
+          "Clay",
+          "Ash"
+        ],
+        [
+          "Earth",
+          "Earthenware"
+        ],
+        [
+          "Fertile Land",
+          "Clay"
+        ]
+      ]
+    },
+    {
+      "name": "Earthenware",
+      "emoji": "🏺",
+      "time": 1765268901987,
+      "depth": 4,
+      "parents": [
+        "Pottery",
+        "Volcanic Soil"
+      ],
+      "recipes": [
+        [
+          "Pottery",
+          "Volcanic Soil"
+        ],
+        [
+          "Mud",
+          "Porcelain"
+        ]
+      ]
+    },
+    {
+      "name": "Terracotta",
+      "emoji": "🏺",
+      "time": 1765268902387,
+      "depth": 4,
+      "parents": [
+        "Pottery",
+        "Volcanic Soil"
+      ],
+      "recipes": [
+        [
+          "Pottery",
+          "Volcanic Soil"
+        ]
+      ]
+    },
+    {
+      "name": "Porcelain",
+      "emoji": "🍶",
+      "time": 1765268904893,
+      "depth": 4,
+      "parents": [
+        "Ceramics",
+        "Ash"
+      ],
+      "recipes": [
+        [
+          "Ceramics",
+          "Ash"
+        ]
+      ]
+    },
+    {
+      "name": "Pottery Shard",
+      "emoji": "🪨",
+      "time": 1765268905516,
+      "depth": 4,
+      "parents": [
+        "Ceramics",
+        "Dust"
+      ],
+      "recipes": [
+        [
+          "Ceramics",
+          "Dust"
+        ]
+      ]
+    },
+    {
+      "name": "Antique",
+      "emoji": "🏺",
+      "time": 1765268908647,
+      "depth": 5,
+      "parents": [
+        "Porcelain",
+        "Pottery Shard"
+      ],
+      "recipes": [
+        [
+          "Porcelain",
+          "Pottery Shard"
+        ]
+      ]
+    },
+    {
+      "name": "Artifact",
+      "emoji": "🏺",
+      "time": 1765268908907,
+      "depth": 5,
+      "parents": [
+        "Ceramics",
+        "Pottery Shard"
+      ],
+      "recipes": [
+        [
+          "Ceramics",
+          "Pottery Shard"
+        ]
+      ]
+    },
+    {
+      "name": "Ancient Vase",
+      "emoji": "🏺",
+      "time": 1765268909158,
+      "depth": 5,
+      "parents": [
+        "Pottery Shard",
+        "Ceramics"
+      ],
+      "recipes": [
+        [
+          "Pottery Shard",
+          "Ceramics"
+        ]
+      ]
+    },
+    {
+      "name": "Ceramic Tile",
+      "emoji": "🟫",
+      "time": 1765268909598,
+      "depth": 5,
+      "parents": [
+        "Porcelain",
+        "Terracotta"
+      ],
+      "recipes": [
+        [
+          "Porcelain",
+          "Terracotta"
+        ]
+      ]
+    },
+    {
+      "name": "Terracotta Tile",
+      "emoji": "🧱",
+      "time": 1765268911164,
+      "depth": 5,
+      "parents": [
+        "Terracotta",
+        "Terracotta"
+      ],
+      "recipes": [
+        [
+          "Terracotta",
+          "Terracotta"
+        ]
+      ]
+    },
+    {
+      "name": "Brick",
+      "emoji": "🧱",
+      "time": 1765269030913,
+      "depth": 3,
+      "parents": [
+        "Clay",
+        "Clay"
+      ],
+      "recipes": [
+        [
+          "Clay",
+          "Clay"
+        ],
+        [
+          "Fire",
+          "Clay"
+        ]
+      ]
+    },
+    {
+      "name": "Wall",
+      "emoji": "🧱",
+      "time": 1765269036200,
+      "depth": 4,
+      "parents": [
+        "Brick",
+        "Brick"
+      ],
+      "recipes": [
+        [
+          "Brick",
+          "Brick"
+        ]
+      ]
+    },
+    {
+      "name": "Fortress",
+      "emoji": "🏰",
+      "time": 1765269042848,
+      "depth": 5,
+      "parents": [
+        "Wall",
+        "Wall"
+      ],
+      "recipes": [
+        [
+          "Wall",
+          "Wall"
+        ]
+      ]
+    },
+    {
+      "name": "Castle",
+      "emoji": "🏰",
+      "time": 1765269051696,
+      "depth": 6,
+      "parents": [
+        "Fortress",
+        "Fortress"
+      ],
+      "recipes": [
+        [
+          "Fortress",
+          "Fortress"
+        ]
+      ]
+    },
+    {
+      "name": "Terracotta Fortress",
+      "emoji": "🏯",
+      "time": 1765272596866,
+      "depth": 7,
+      "parents": [
+        "Castle",
+        "Terracotta Tile"
+      ],
+      "recipes": [
+        [
+          "Castle",
+          "Terracotta Tile"
+        ]
+      ]
+    },
+    {
+      "name": "Fertile Land",
+      "emoji": "🌾",
+      "time": 1765272616182,
+      "depth": 3,
+      "parents": [
+        "Volcanic Soil",
+        "Volcanic Soil"
+      ],
+      "recipes": [
+        [
+          "Volcanic Soil",
+          "Volcanic Soil"
+        ]
+      ]
+    },
+    {
+      "name": "Fertile Ground",
+      "emoji": "🌱",
+      "time": 1765272618356,
+      "depth": 3,
+      "parents": [
+        "Volcanic Soil",
+        "Volcanic Soil"
+      ],
+      "recipes": [
+        [
+          "Volcanic Soil",
+          "Volcanic Soil"
+        ]
+      ]
+    },
+    {
+      "name": "Lush Valley",
+      "emoji": "🏞️",
+      "time": 1765272621192,
+      "depth": 4,
+      "parents": [
+        "Fertile Ground",
+        "Fertile Land"
+      ],
+      "recipes": [
+        [
+          "Fertile Ground",
+          "Fertile Land"
+        ]
+      ]
+    },
+    {
+      "name": "Fertile Soil",
+      "emoji": "🌱",
+      "time": 1765272626195,
+      "depth": 5,
+      "parents": [
+        "Earth",
+        "Lush Valley"
+      ],
+      "recipes": [
+        [
+          "Earth",
+          "Lush Valley"
+        ]
+      ]
+    },
+    {
+      "name": "Adobe",
+      "emoji": "🏜️",
+      "time": 1765272832649,
+      "depth": 4,
+      "parents": [
+        "Desert",
+        "Brick"
+      ],
+      "recipes": [
+        [
+          "Desert",
+          "Brick"
+        ]
+      ]
+    },
+    {
+      "name": "Farm",
+      "emoji": "🚜",
+      "time": 1765272853901,
+      "depth": 4,
+      "parents": [
+        "Fertile Land",
+        "Fertile Land"
+      ],
+      "recipes": [
+        [
+          "Fertile Land",
+          "Fertile Land"
+        ]
+      ]
+    },
+    {
+      "name": "Agriculture",
+      "emoji": "🌾",
+      "time": 1765272855593,
+      "depth": 5,
+      "parents": [
+        "Farm",
+        "Farm"
+      ],
+      "recipes": [
+        [
+          "Farm",
+          "Farm"
+        ]
+      ]
+    },
+    {
+      "name": "Crops",
+      "emoji": "🌾",
+      "time": 1765272855905,
+      "depth": 5,
+      "parents": [
+        "Farm",
+        "Fertile Land"
+      ],
+      "recipes": [
+        [
+          "Farm",
+          "Fertile Land"
+        ]
+      ]
+    },
+    {
+      "name": "Bountiful Harvest",
+      "emoji": "🌾",
+      "time": 1765272856521,
+      "depth": 5,
+      "parents": [
+        "Farm",
+        "Fertile Land"
+      ],
+      "recipes": [
+        [
+          "Farm",
+          "Fertile Land"
+        ],
+        [
+          "Prosperity",
+          "Crops"
+        ]
+      ]
+    },
+    {
+      "name": "Cornucopia",
+      "emoji": "🦃",
+      "time": 1765272859485,
+      "depth": 6,
+      "parents": [
+        "Bountiful Harvest",
+        "Pottery"
+      ],
+      "recipes": [
+        [
+          "Bountiful Harvest",
+          "Pottery"
+        ]
+      ]
+    },
+    {
+      "name": "Prosperity",
+      "emoji": "🌾",
+      "time": 1765272860051,
+      "depth": 6,
+      "parents": [
+        "Bountiful Harvest",
+        "Agriculture"
+      ],
+      "recipes": [
+        [
+          "Bountiful Harvest",
+          "Agriculture"
+        ],
+        [
+          "Harvest",
+          "Abundance"
+        ]
+      ]
+    },
+    {
+      "name": "Harvest Festival",
+      "emoji": "🎉",
+      "time": 1765272860476,
+      "depth": 7,
+      "parents": [
+        "Cornucopia",
+        "Agriculture"
+      ],
+      "recipes": [
+        [
+          "Cornucopia",
+          "Agriculture"
+        ]
+      ]
+    },
+    {
+      "name": "Harvest",
+      "emoji": "🌾",
+      "time": 1765272860695,
+      "depth": 7,
+      "parents": [
+        "Cornucopia",
+        "Agriculture"
+      ],
+      "recipes": [
+        [
+          "Cornucopia",
+          "Agriculture"
+        ],
+        [
+          "Prosperity",
+          "Crops"
+        ]
+      ]
+    },
+    {
+      "name": "Abundance",
+      "emoji": "🪔",
+      "time": 1765272863015,
+      "depth": 8,
+      "parents": [
+        "Harvest",
+        "Cornucopia"
+      ],
+      "recipes": [
+        [
+          "Harvest",
+          "Cornucopia"
+        ],
+        [
+          "Bountiful Harvest",
+          "Cornucopia"
+        ],
+        [
+          "Harvest",
+          "Harvest"
+        ]
+      ]
+    },
+    {
+      "name": "Feast",
+      "emoji": "🍽️",
+      "time": 1765272864598,
+      "depth": 7,
+      "parents": [
+        "Bountiful Harvest",
+        "Cornucopia"
+      ],
+      "recipes": [
+        [
+          "Bountiful Harvest",
+          "Cornucopia"
+        ],
+        [
+          "Abundance",
+          "Harvest Festival"
+        ]
+      ]
+    },
+    {
+      "name": "Overflow",
+      "emoji": "🌊",
+      "time": 1765272866589,
+      "depth": 9,
+      "parents": [
+        "Abundance",
+        "Abundance"
+      ],
+      "recipes": [
+        [
+          "Abundance",
+          "Abundance"
+        ]
+      ]
+    },
+    {
+      "name": "Bounty",
+      "emoji": "🪙",
+      "time": 1765272867469,
+      "depth": 9,
+      "parents": [
+        "Abundance",
+        "Harvest"
+      ],
+      "recipes": [
+        [
+          "Abundance",
+          "Harvest"
+        ],
+        [
+          "Harvest",
+          "Harvest"
+        ]
+      ]
+    },
+    {
+      "name": "Wealth",
+      "emoji": "💰",
+      "time": 1765272869029,
+      "depth": 9,
+      "parents": [
+        "Prosperity",
+        "Abundance"
+      ],
+      "recipes": [
+        [
+          "Prosperity",
+          "Abundance"
+        ]
+      ]
+    },
+    {
+      "name": "Fortune",
+      "emoji": "🍀",
+      "time": 1765272877010,
+      "depth": 10,
+      "parents": [
+        "Wealth",
+        "Wealth"
+      ],
+      "recipes": [
+        [
+          "Wealth",
+          "Wealth"
+        ]
+      ]
+    },
+    {
+      "name": "Double Luck",
+      "emoji": "🍀",
+      "time": 1765272885067,
+      "depth": 11,
+      "parents": [
+        "Fortune",
+        "Fortune"
+      ],
+      "recipes": [
+        [
+          "Fortune",
+          "Fortune"
+        ]
+      ]
+    },
+    {
+      "name": "Village",
+      "emoji": "🏘️",
+      "time": 1765273895005,
+      "depth": 5,
+      "parents": [
+        "Farm",
+        "Farm"
+      ],
+      "recipes": [
+        [
+          "Farm",
+          "Farm"
+        ],
+        [
+          "Farmstead",
+          "Town"
+        ]
+      ]
+    },
+    {
+      "name": "Ranch",
+      "emoji": "🐄",
+      "time": 1765273895717,
+      "depth": 5,
+      "parents": [
+        "Farm",
+        "Farm"
+      ],
+      "recipes": [
+        [
+          "Farm",
+          "Farm"
+        ],
+        [
+          "Crops",
+          "Cowboy Sauce"
+        ]
+      ]
+    },
+    {
+      "name": "Town",
+      "emoji": "🏘️",
+      "time": 1765273896933,
+      "depth": 6,
+      "parents": [
+        "Village",
+        "Village"
+      ],
+      "recipes": [
+        [
+          "Village",
+          "Village"
+        ]
+      ]
+    },
+    {
+      "name": "Farmstead",
+      "emoji": "🏡",
+      "time": 1765273897727,
+      "depth": 6,
+      "parents": [
+        "Village",
+        "Agriculture"
+      ],
+      "recipes": [
+        [
+          "Village",
+          "Agriculture"
+        ],
+        [
+          "Agriculture",
+          "Ranch"
+        ]
+      ]
+    },
+    {
+      "name": "City",
+      "emoji": "🏙️",
+      "time": 1765273902533,
+      "depth": 7,
+      "parents": [
+        "Town",
+        "Village"
+      ],
+      "recipes": [
+        [
+          "Town",
+          "Village"
+        ]
+      ]
+    },
+    {
+      "name": "Suburb",
+      "emoji": "🏘️",
+      "time": 1765273905840,
+      "depth": 8,
+      "parents": [
+        "City",
+        "Farmstead"
+      ],
+      "recipes": [
+        [
+          "City",
+          "Farmstead"
+        ]
+      ]
+    },
+    {
+      "name": "Metropolis",
+      "emoji": "🏙️",
+      "time": 1765273908965,
+      "depth": 8,
+      "parents": [
+        "City",
+        "City"
+      ],
+      "recipes": [
+        [
+          "City",
+          "City"
+        ],
+        [
+          "Suburb",
+          "City"
+        ],
+        [
+          "Mega City",
+          "Mega City"
+        ],
+        [
+          "Megalopolis",
+          "Supercity"
+        ],
+        [
+          "Megalopolis",
+          "Megacity"
+        ]
+      ]
+    },
+    {
+      "name": "Mega City",
+      "emoji": "🏙️",
+      "time": 1765273910461,
+      "depth": 9,
+      "parents": [
+        "Metropolis",
+        "Metropolis"
+      ],
+      "recipes": [
+        [
+          "Metropolis",
+          "Metropolis"
+        ],
+        [
+          "Planetary City",
+          "Metropolis"
+        ],
+        [
+          "Infinite Metropolis",
+          "Urban Jungle"
+        ],
+        [
+          "Galactic Metropolis",
+          "Metropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Megalopolis",
+      "emoji": "🏙️",
+      "time": 1765273911268,
+      "depth": 9,
+      "parents": [
+        "Metropolis",
+        "Metropolis"
+      ],
+      "recipes": [
+        [
+          "Metropolis",
+          "Metropolis"
+        ],
+        [
+          "Supercity",
+          "Metropolis"
+        ],
+        [
+          "Hypercity",
+          "Urban Sprawl"
+        ],
+        [
+          "Planetary City",
+          "Metropolis"
+        ],
+        [
+          "Urban Sprawl",
+          "Endless City"
+        ]
+      ]
+    },
+    {
+      "name": "Megalometropolis",
+      "emoji": "🏙️",
+      "time": 1765273913118,
+      "depth": 10,
+      "parents": [
+        "Metropolis",
+        "Megalopolis"
+      ],
+      "recipes": [
+        [
+          "Metropolis",
+          "Megalopolis"
+        ]
+      ]
+    },
+    {
+      "name": "Supercity",
+      "emoji": "🏙️",
+      "time": 1765273913875,
+      "depth": 10,
+      "parents": [
+        "Metropolis",
+        "Megalopolis"
+      ],
+      "recipes": [
+        [
+          "Metropolis",
+          "Megalopolis"
+        ]
+      ]
+    },
+    {
+      "name": "Urban Sprawl",
+      "emoji": "🏙️",
+      "time": 1765273916149,
+      "depth": 11,
+      "parents": [
+        "Supercity",
+        "Metropolis"
+      ],
+      "recipes": [
+        [
+          "Supercity",
+          "Metropolis"
+        ],
+        [
+          "Megalopolis",
+          "Supercity"
+        ],
+        [
+          "Megalopolis",
+          "Megacity"
+        ],
+        [
+          "Mega City",
+          "Metropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Hypercity",
+      "emoji": "🌆",
+      "time": 1765273916707,
+      "depth": 11,
+      "parents": [
+        "Supercity",
+        "Megalopolis"
+      ],
+      "recipes": [
+        [
+          "Supercity",
+          "Megalopolis"
+        ]
+      ]
+    },
+    {
+      "name": "Gigaopolis",
+      "emoji": "🏙️",
+      "time": 1765273917883,
+      "depth": 12,
+      "parents": [
+        "Hypercity",
+        "Megalometropolis"
+      ],
+      "recipes": [
+        [
+          "Hypercity",
+          "Megalometropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Planetary City",
+      "emoji": "🪐",
+      "time": 1765273918803,
+      "depth": 12,
+      "parents": [
+        "Hypercity",
+        "Megalometropolis"
+      ],
+      "recipes": [
+        [
+          "Hypercity",
+          "Megalometropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Megametropolis",
+      "emoji": "🌆",
+      "time": 1765273919142,
+      "depth": 13,
+      "parents": [
+        "Gigaopolis",
+        "Urban Sprawl"
+      ],
+      "recipes": [
+        [
+          "Gigaopolis",
+          "Urban Sprawl"
+        ]
+      ]
+    },
+    {
+      "name": "Megacity",
+      "emoji": "🌆",
+      "time": 1765273919411,
+      "depth": 13,
+      "parents": [
+        "Gigaopolis",
+        "Urban Sprawl"
+      ],
+      "recipes": [
+        [
+          "Gigaopolis",
+          "Urban Sprawl"
+        ],
+        [
+          "Urban Sprawl",
+          "Endless City"
+        ]
+      ]
+    },
+    {
+      "name": "Endless City",
+      "emoji": "🌆",
+      "time": 1765273919701,
+      "depth": 12,
+      "parents": [
+        "Megalopolis",
+        "Urban Sprawl"
+      ],
+      "recipes": [
+        [
+          "Megalopolis",
+          "Urban Sprawl"
+        ]
+      ]
+    },
+    {
+      "name": "Interplanetary Metropolis",
+      "emoji": "🌌",
+      "time": 1765273920204,
+      "depth": 13,
+      "parents": [
+        "Megalopolis",
+        "Planetary City"
+      ],
+      "recipes": [
+        [
+          "Megalopolis",
+          "Planetary City"
+        ],
+        [
+          "Galactic Cityscape",
+          "Mega City"
+        ]
+      ]
+    },
+    {
+      "name": "Galactic Capital",
+      "emoji": "🏙️",
+      "time": 1765273920888,
+      "depth": 13,
+      "parents": [
+        "Planetary City",
+        "Megalopolis"
+      ],
+      "recipes": [
+        [
+          "Planetary City",
+          "Megalopolis"
+        ],
+        [
+          "Megametropolis",
+          "Planetary City"
+        ]
+      ]
+    },
+    {
+      "name": "Urban Jungle",
+      "emoji": "🌆",
+      "time": 1765273922996,
+      "depth": 14,
+      "parents": [
+        "Megalopolis",
+        "Megacity"
+      ],
+      "recipes": [
+        [
+          "Megalopolis",
+          "Megacity"
+        ]
+      ]
+    },
+    {
+      "name": "Galactic Megacity",
+      "emoji": "🌌",
+      "time": 1765273925000,
+      "depth": 14,
+      "parents": [
+        "Urban Sprawl",
+        "Interplanetary Metropolis"
+      ],
+      "recipes": [
+        [
+          "Urban Sprawl",
+          "Interplanetary Metropolis"
+        ],
+        [
+          "Cosmic Urban Sprawl",
+          "Cosmic Urban Sprawl"
+        ]
+      ]
+    },
+    {
+      "name": "Galactic Cityscape",
+      "emoji": "🌌",
+      "time": 1765273925026,
+      "depth": 14,
+      "parents": [
+        "Urban Sprawl",
+        "Interplanetary Metropolis"
+      ],
+      "recipes": [
+        [
+          "Urban Sprawl",
+          "Interplanetary Metropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Megalopolis Complex",
+      "emoji": "🏙️",
+      "time": 1765273925058,
+      "depth": 14,
+      "parents": [
+        "Megalopolis",
+        "Megacity"
+      ],
+      "recipes": [
+        [
+          "Megalopolis",
+          "Megacity"
+        ]
+      ]
+    },
+    {
+      "name": "Infinite Metropolis",
+      "emoji": "🌆",
+      "time": 1765273926432,
+      "depth": 15,
+      "parents": [
+        "Megalopolis Complex",
+        "Endless City"
+      ],
+      "recipes": [
+        [
+          "Megalopolis Complex",
+          "Endless City"
+        ]
+      ]
+    },
+    {
+      "name": "Cosmopolis",
+      "emoji": "🏙️",
+      "time": 1765273927838,
+      "depth": 15,
+      "parents": [
+        "Galactic Cityscape",
+        "Mega City"
+      ],
+      "recipes": [
+        [
+          "Galactic Cityscape",
+          "Mega City"
+        ]
+      ]
+    },
+    {
+      "name": "Galactic Metropolis",
+      "emoji": "🌌",
+      "time": 1765273928181,
+      "depth": 15,
+      "parents": [
+        "Galactic Cityscape",
+        "Galactic Capital"
+      ],
+      "recipes": [
+        [
+          "Galactic Cityscape",
+          "Galactic Capital"
+        ],
+        [
+          "Galactic Capital",
+          "Galactic Capital"
+        ]
+      ]
+    },
+    {
+      "name": "Interstellar Metropolis",
+      "emoji": "🏙️",
+      "time": 1765273928761,
+      "depth": 15,
+      "parents": [
+        "Galactic Cityscape",
+        "Mega City"
+      ],
+      "recipes": [
+        [
+          "Galactic Cityscape",
+          "Mega City"
+        ]
+      ]
+    },
+    {
+      "name": "Empire",
+      "emoji": "🏛️",
+      "time": 1765273930207,
+      "depth": 14,
+      "parents": [
+        "Galactic Capital",
+        "Galactic Capital"
+      ],
+      "recipes": [
+        [
+          "Galactic Capital",
+          "Galactic Capital"
+        ]
+      ]
+    },
+    {
+      "name": "Galactic Empire",
+      "emoji": "🪐",
+      "time": 1765273930380,
+      "depth": 14,
+      "parents": [
+        "Galactic Capital",
+        "Galactic Capital"
+      ],
+      "recipes": [
+        [
+          "Galactic Capital",
+          "Galactic Capital"
+        ],
+        [
+          "Galactic Megacity",
+          "Galactic Megacity"
+        ]
+      ]
+    },
+    {
+      "name": "Imperial Core",
+      "emoji": "🏛️",
+      "time": 1765273930692,
+      "depth": 14,
+      "parents": [
+        "Galactic Capital",
+        "Galactic Capital"
+      ],
+      "recipes": [
+        [
+          "Galactic Capital",
+          "Galactic Capital"
+        ]
+      ]
+    },
+    {
+      "name": "Neo City",
+      "emoji": "🌆",
+      "time": 1765273932244,
+      "depth": 16,
+      "parents": [
+        "Infinite Metropolis",
+        "Urban Jungle"
+      ],
+      "recipes": [
+        [
+          "Infinite Metropolis",
+          "Urban Jungle"
+        ]
+      ]
+    },
+    {
+      "name": "Mega Metropolis",
+      "emoji": "🏙️",
+      "time": 1765273934264,
+      "depth": 16,
+      "parents": [
+        "Galactic Metropolis",
+        "Metropolis"
+      ],
+      "recipes": [
+        [
+          "Galactic Metropolis",
+          "Metropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Imperial City",
+      "emoji": "🏙️",
+      "time": 1765273935600,
+      "depth": 15,
+      "parents": [
+        "Galactic Empire",
+        "Metropolis"
+      ],
+      "recipes": [
+        [
+          "Galactic Empire",
+          "Metropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Urban Empire",
+      "emoji": "🏙️",
+      "time": 1765273936272,
+      "depth": 10,
+      "parents": [
+        "Mega City",
+        "Metropolis"
+      ],
+      "recipes": [
+        [
+          "Mega City",
+          "Metropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Mega-Metropolis",
+      "emoji": "🏙️",
+      "time": 1765273936481,
+      "depth": 16,
+      "parents": [
+        "Galactic Metropolis",
+        "Metropolis"
+      ],
+      "recipes": [
+        [
+          "Galactic Metropolis",
+          "Metropolis"
+        ]
+      ]
+    },
+    {
+      "name": "Cosmic Urban Sprawl",
+      "emoji": "🌌",
+      "time": 1765273941934,
+      "depth": 17,
+      "parents": [
+        "Mega-Metropolis",
+        "Galactic Megacity"
+      ],
+      "recipes": [
+        [
+          "Mega-Metropolis",
+          "Galactic Megacity"
+        ]
+      ]
+    },
+    {
+      "name": "Clone Army",
+      "emoji": "🪖",
+      "time": 1765274137857,
+      "depth": 15,
+      "parents": [
+        "Galactic Empire",
+        "Galactic Empire"
+      ],
+      "recipes": [
+        [
+          "Galactic Empire",
+          "Galactic Empire"
+        ],
+        [
+          "Clone Legion",
+          "Clone Legion"
+        ]
+      ]
+    },
+    {
+      "name": "Clone Legion",
+      "emoji": "🛡️",
+      "time": 1765274146897,
+      "depth": 16,
+      "parents": [
+        "Clone Army",
+        "Clone Army"
+      ],
+      "recipes": [
+        [
+          "Clone Army",
+          "Clone Army"
+        ]
+      ]
+    },
+    {
+      "name": "Cyber Legion",
+      "emoji": "🤖",
+      "time": 1765274161140,
+      "depth": 17,
+      "parents": [
+        "Clone Army",
+        "Neo City"
+      ],
+      "recipes": [
+        [
+          "Clone Army",
+          "Neo City"
+        ]
+      ]
+    },
+    {
+      "name": "Clone Empire",
+      "emoji": "🏰",
+      "time": 1765274161521,
+      "depth": 17,
+      "parents": [
+        "Clone Army",
+        "Clone Legion"
+      ],
+      "recipes": [
+        [
+          "Clone Army",
+          "Clone Legion"
+        ]
+      ]
+    },
+    {
+      "name": "Cyber Army",
+      "emoji": "🤖",
+      "time": 1765274163132,
+      "depth": 18,
+      "parents": [
+        "Cyber Legion",
+        "Cyber Legion"
+      ],
+      "recipes": [
+        [
+          "Cyber Legion",
+          "Cyber Legion"
+        ]
+      ]
+    },
+    {
+      "name": "Clone Dynasty",
+      "emoji": "👑",
+      "time": 1765274164215,
+      "depth": 18,
+      "parents": [
+        "Clone Empire",
+        "Clone Empire"
+      ],
+      "recipes": [
+        [
+          "Clone Empire",
+          "Clone Empire"
+        ]
+      ]
+    },
+    {
+      "name": "Synthetic Dynasty",
+      "emoji": "🤖",
+      "time": 1765274164635,
+      "depth": 18,
+      "parents": [
+        "Cyber Legion",
+        "Clone Empire"
+      ],
+      "recipes": [
+        [
+          "Cyber Legion",
+          "Clone Empire"
+        ]
+      ]
+    },
+    {
+      "name": "Robo Empire",
+      "emoji": "🤖",
+      "time": 1765274165759,
+      "depth": 19,
+      "parents": [
+        "Synthetic Dynasty",
+        "Cyber Army"
+      ],
+      "recipes": [
+        [
+          "Synthetic Dynasty",
+          "Cyber Army"
+        ]
+      ]
+    },
+    {
+      "name": "Cyber War",
+      "emoji": "⚔️",
+      "time": 1765274166396,
+      "depth": 19,
+      "parents": [
+        "Cyber Army",
+        "Cyber Army"
+      ],
+      "recipes": [
+        [
+          "Cyber Army",
+          "Cyber Army"
+        ]
+      ]
+    },
+    {
+      "name": "Synthetic Empire",
+      "emoji": "🤖",
+      "time": 1765274167425,
+      "depth": 19,
+      "parents": [
+        "Cyber Army",
+        "Clone Dynasty"
+      ],
+      "recipes": [
+        [
+          "Cyber Army",
+          "Clone Dynasty"
+        ]
+      ]
+    },
+    {
+      "name": "Automated Monarchy",
+      "emoji": "🤖",
+      "time": 1765274168663,
+      "depth": 20,
+      "parents": [
+        "Synthetic Empire",
+        "Clone Dynasty"
+      ],
+      "recipes": [
+        [
+          "Synthetic Empire",
+          "Clone Dynasty"
+        ]
+      ]
+    },
+    {
+      "name": "Replicated Empire",
+      "emoji": "🏯",
+      "time": 1765274171693,
+      "depth": 21,
+      "parents": [
+        "Automated Monarchy",
+        "Clone Dynasty"
+      ],
+      "recipes": [
+        [
+          "Automated Monarchy",
+          "Clone Dynasty"
+        ]
+      ]
+    },
+    {
+      "name": "Ranch Dressing",
+      "emoji": "🥗",
+      "time": 1765274194555,
+      "depth": 6,
+      "parents": [
+        "Ranch",
+        "Ranch"
+      ],
+      "recipes": [
+        [
+          "Ranch",
+          "Ranch"
+        ]
+      ]
+    },
+    {
+      "name": "Dude Ranch",
+      "emoji": "🤠",
+      "time": 1765274194920,
+      "depth": 6,
+      "parents": [
+        "Ranch",
+        "Ranch"
+      ],
+      "recipes": [
+        [
+          "Ranch",
+          "Ranch"
+        ]
+      ]
+    },
+    {
+      "name": "Cattle",
+      "emoji": "🐄",
+      "time": 1765274195200,
+      "depth": 6,
+      "parents": [
+        "Ranch",
+        "Farm"
+      ],
+      "recipes": [
+        [
+          "Ranch",
+          "Farm"
+        ]
+      ]
+    },
+    {
+      "name": "Dairy",
+      "emoji": "🥛",
+      "time": 1765274195515,
+      "depth": 6,
+      "parents": [
+        "Ranch",
+        "Farm"
+      ],
+      "recipes": [
+        [
+          "Ranch",
+          "Farm"
+        ]
+      ]
+    },
+    {
+      "name": "Cowboy Sauce",
+      "emoji": "🤠",
+      "time": 1765274197091,
+      "depth": 7,
+      "parents": [
+        "Dude Ranch",
+        "Ranch Dressing"
+      ],
+      "recipes": [
+        [
+          "Dude Ranch",
+          "Ranch Dressing"
+        ]
+      ]
+    },
+    {
+      "name": "Salad Bar",
+      "emoji": "🥗",
+      "time": 1765274197537,
+      "depth": 7,
+      "parents": [
+        "Dude Ranch",
+        "Ranch Dressing"
+      ],
+      "recipes": [
+        [
+          "Dude Ranch",
+          "Ranch Dressing"
+        ]
+      ]
+    },
+    {
+      "name": "Painted Pottery",
+      "emoji": "🏺",
+      "time": 1765274199669,
+      "depth": 8,
+      "parents": [
+        "Cowboy Sauce",
+        "Porcelain"
+      ],
+      "recipes": [
+        [
+          "Cowboy Sauce",
+          "Porcelain"
+        ]
+      ]
+    },
+    {
+      "name": "Wild West Relic",
+      "emoji": "🏺",
+      "time": 1765274200085,
+      "depth": 8,
+      "parents": [
+        "Cowboy Sauce",
+        "Ancient Vase"
+      ],
+      "recipes": [
+        [
+          "Cowboy Sauce",
+          "Ancient Vase"
+        ]
+      ]
+    },
+    {
+      "name": "Western Ranch",
+      "emoji": "🤠",
+      "time": 1765274200457,
+      "depth": 8,
+      "parents": [
+        "Cowboy Sauce",
+        "Ranch Dressing"
+      ],
+      "recipes": [
+        [
+          "Cowboy Sauce",
+          "Ranch Dressing"
+        ]
+      ]
+    },
+    {
+      "name": "Barbecue",
+      "emoji": "🍖",
+      "time": 1765274205015,
+      "depth": 8,
+      "parents": [
+        "Mud",
+        "Cowboy Sauce"
+      ],
+      "recipes": [
+        [
+          "Mud",
+          "Cowboy Sauce"
+        ]
+      ]
+    },
+    {
+      "name": "Harvest Vase",
+      "emoji": "🏺",
+      "time": 1765274207761,
+      "depth": 9,
+      "parents": [
+        "Crops",
+        "Painted Pottery"
+      ],
+      "recipes": [
+        [
+          "Crops",
+          "Painted Pottery"
+        ]
+      ]
+    },
+    {
+      "name": "Buffalo",
+      "emoji": "🐃",
+      "time": 1765274208342,
+      "depth": 7,
+      "parents": [
+        "Mud",
+        "Cattle"
+      ],
+      "recipes": [
+        [
+          "Mud",
+          "Cattle"
+        ]
+      ]
+    },
+    {
+      "name": "Harvest Bowl",
+      "emoji": "🥣",
+      "time": 1765274209080,
+      "depth": 9,
+      "parents": [
+        "Crops",
+        "Painted Pottery"
+      ],
+      "recipes": [
+        [
+          "Crops",
+          "Painted Pottery"
+        ]
+      ]
+    },
+    {
+      "name": "Herd",
+      "emoji": "🐃",
+      "time": 1765274256017,
+      "depth": 8,
+      "parents": [
+        "Buffalo",
+        "Buffalo"
+      ],
+      "recipes": [
+        [
+          "Buffalo",
+          "Buffalo"
+        ]
+      ]
+    },
+    {
+      "name": "Buffalo Wings",
+      "emoji": "🍗",
+      "time": 1765274256581,
+      "depth": 9,
+      "parents": [
+        "Buffalo",
+        "Barbecue"
+      ],
+      "recipes": [
+        [
+          "Buffalo",
+          "Barbecue"
+        ]
+      ]
+    },
+    {
+      "name": "Gravy",
+      "emoji": "🥫",
+      "time": 1765274262653,
+      "depth": 8,
+      "parents": [
+        "Cowboy Sauce",
+        "Mud"
+      ],
+      "recipes": [
+        [
+          "Cowboy Sauce",
+          "Mud"
+        ]
+      ]
+    },
+    {
+      "name": "Rice Paddy",
+      "emoji": "🌾",
+      "time": 1765274263382,
+      "depth": 4,
+      "parents": [
+        "Mud",
+        "Fertile Land"
+      ],
+      "recipes": [
+        [
+          "Mud",
+          "Fertile Land"
+        ]
+      ]
+    },
+    {
+      "name": "Cowboy Feast",
+      "emoji": "🥩",
+      "time": 1765274265315,
+      "depth": 10,
+      "parents": [
+        "Harvest Bowl",
+        "Wild West Relic"
+      ],
+      "recipes": [
+        [
+          "Harvest Bowl",
+          "Wild West Relic"
+        ]
+      ]
+    },
+    {
+      "name": "Buffet",
+      "emoji": "🥗",
+      "time": 1765274265703,
+      "depth": 10,
+      "parents": [
+        "Harvest Bowl",
+        "Salad Bar"
+      ],
+      "recipes": [
+        [
+          "Harvest Bowl",
+          "Salad Bar"
+        ]
+      ]
+    },
+    {
+      "name": "Cheesy Harvest Bowl",
+      "emoji": "🧀",
+      "time": 1765274265922,
+      "depth": 10,
+      "parents": [
+        "Harvest Bowl",
+        "Dairy"
+      ],
+      "recipes": [
+        [
+          "Harvest Bowl",
+          "Dairy"
+        ]
+      ]
+    },
+    {
+      "name": "Cowboy Mac & Cheese",
+      "emoji": "🤠",
+      "time": 1765274268582,
+      "depth": 11,
+      "parents": [
+        "Cheesy Harvest Bowl",
+        "Western Ranch"
+      ],
+      "recipes": [
+        [
+          "Cheesy Harvest Bowl",
+          "Western Ranch"
+        ]
+      ]
+    },
+    {
+      "name": "BBQ Cheesy Bowl",
+      "emoji": "🍲",
+      "time": 1765274268839,
+      "depth": 11,
+      "parents": [
+        "Cheesy Harvest Bowl",
+        "Barbecue"
+      ],
+      "recipes": [
+        [
+          "Cheesy Harvest Bowl",
+          "Barbecue"
+        ]
+      ]
+    },
+    {
+      "name": "Buffalo Cheesy Bowl",
+      "emoji": "🍲",
+      "time": 1765274269089,
+      "depth": 11,
+      "parents": [
+        "Cheesy Harvest Bowl",
+        "Buffalo Wings"
+      ],
+      "recipes": [
+        [
+          "Cheesy Harvest Bowl",
+          "Buffalo Wings"
+        ]
+      ]
+    }
+  ]
+}

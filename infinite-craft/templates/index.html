@@ -12,18 +12,62 @@
             <div class="controls">
                 <button id="clear-btn">Clear Canvas</button>
                 <button id="reset-btn">Reset Game</button>
+                <button id="export-btn">Export JSON</button>
+                <button id="import-btn">Import JSON</button>
+                <input type="file" id="import-file" accept=".json" style="display: none;">
             </div>
             <div class="message" id="message">Drag elements here to combine them</div>
         </div>
         <div class="sidebar">
             <div class="search-container">
                 <input type="text" id="search-input" placeholder="Search elements...">
+                <div class="sort-controls">
+                    <select id="sort-select">
+                        <option value="name">Name (A-Z)</option>
+                        <option value="time-desc">Newest First</option>
+                        <option value="time-asc">Oldest First</option>
+                        <option value="depth-asc">Hierarchy (Simple First)</option>
+                        <option value="depth-desc">Hierarchy (Complex First)</option>
+                        <option value="words-asc">Words (Fewest First)</option>
+                        <option value="words-desc">Words (Most First)</option>
+                    </select>
+                </div>
+                <div class="filter-controls">
+                    <select id="word-filter">
+                        <option value="all">All Word Counts</option>
+                        <option value="1">1 Word Only</option>
+                        <option value="2">2 Words Only</option>
+                        <option value="3">3 Words Only</option>
+                        <option value="4+">4+ Words</option>
+                    </select>
+                </div>
             </div>
             <div class="elements-list" id="elements-list">
                 <!-- Elements will be populated here -->
             </div>
         </div>
     </div>
+
+    <!-- Element Details Modal -->
+    <div id="element-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-header">
+                <div id="modal-emoji" class="modal-emoji"></div>
+                <h2 id="modal-title"></h2>
+            </div>
+            <div class="modal-info">
+                <p><strong>Discovered:</strong> <span id="modal-date"></span></p>
+                <p><strong>Hierarchy Depth:</strong> <span id="modal-depth"></span></p>
+            </div>
+            <div class="crafting-tree-container">
+                <h3>Crafting Recipe</h3>
+                <div id="crafting-tree" class="tree"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/script.js"></script>
+    <script src="/static/modal.js"></script>
 </body>
 </html>

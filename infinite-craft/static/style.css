@@ -41,6 +41,9 @@ body {
 .search-container {
     padding: 10px;
     border-bottom: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 #search-input {
@@ -51,6 +54,16 @@ body {
     background-color: #444;
     color: white;
     box-sizing: border-box;
+}
+
+#sort-select {
+    width: 100%;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
 }
 
 .elements-list {
@@ -108,6 +121,165 @@ body {
 @keyframes flash {
     0% { background-color: #ffff00; }
     100% { background-color: var(--element-bg); }
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: #2d2d2d;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #555;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 8px;
+    color: white;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.close-modal {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    color: white;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+}
+
+.modal-emoji {
+    font-size: 48px;
+}
+
+.modal-info {
+    margin-bottom: 20px;
+    color: #ccc;
+}
+
+/* Tree Visualization - Simple vertical list style */
+.tree {
+    padding: 20px;
+    background: #222;
+    border-radius: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.recipe-container {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #444;
+}
+
+.recipe-container:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.tree-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    padding-left: calc(var(--depth, 0) * 24px);
+    border-left: 2px solid transparent;
+}
+
+.tree-row:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.tree-row.depth-0 { border-left-color: #4CAF50; }
+.tree-row.depth-1 { border-left-color: #2196F3; }
+.tree-row.depth-2 { border-left-color: #FF9800; }
+.tree-row.depth-3 { border-left-color: #9C27B0; }
+.tree-row.depth-4 { border-left-color: #F44336; }
+
+.tree-toggle {
+    width: 20px;
+    height: 20px;
+    background-color: #444;
+    border: 1px solid #666;
+    border-radius: 4px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-right: 8px;
+    font-size: 12px;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+}
+
+.tree-toggle:hover {
+    background-color: #666;
+}
+
+.tree-toggle.placeholder {
+    visibility: hidden;
+}
+
+.tree-element {
+    background-color: var(--element-bg);
+    color: var(--element-text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--element-border);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.tree-arrow {
+    color: #888;
+    margin: 0 10px;
+    font-size: 14px;
+}
+
+.tree-parents {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #888;
+    font-size: 12px;
+}
+
+.tree-parent-element {
+    background-color: #3a3a3a;
+    color: #ccc;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.tree-plus {
+    color: #888;
+    font-weight: bold;
 }
 
 .controls {
